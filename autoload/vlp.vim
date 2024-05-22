@@ -45,6 +45,8 @@ endfunction
 
 
 " Main functions
+" TODO: accept an optional dictionary of options,
+"       e.g. ft of the preview buffer
 function! vlp#EnterPreviewMode(func)
   if s:tmpfile != ""
     call PrintError("Already in preview mode.")
@@ -52,15 +54,17 @@ function! vlp#EnterPreviewMode(func)
   endif
 
   let s:tmpfile = tempname()
-  let s:func = function(a:func)
+  let s:func = function(a:func) " TODO: also add support for cmds
   call writefile([""], s:tmpfile) " create empty file
   augroup preview_mode
     autocmd!
     autocmd TextChanged,TextChangedI <buffer>
-          \ call writefile(s:func(1, line("$")), fnameescape(s:tmpfile)) | checktime
+          \ call writefile(s:func(1, line("$")), fnameescape(s:tmpfile))
+          \ | checktime
     autocmd BufDelete <buffer> call s:LeavePreviewMode()
   augroup END
   command! -buffer -nargs=0  LeavePreviewMode call s:LeavePreviewMode()
+  " TODO: move 'scratch' buffer setup into separate function
   execute 'vs' fnameescape(s:tmpfile)
   setlocal autoread
   setlocal readonly
