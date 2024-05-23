@@ -5,6 +5,7 @@ let g:autoloaded_vim_live_preview = 1
 
 " Script variables and constants
 let s:preview_bufnr = -1
+let s:focus_bufnr = -1
 let s:func = ""
 let s:updatetime_restore = &updatetime
 
@@ -31,31 +32,47 @@ function! s:PrintError(msg)
 endfunction
 
 
+function! s:CleanUpLeaveCommand()
+  let l:current_buffer = bufnr()
+  if l:current_buffer == s:focus_bufnr
+    delcommand -buffer VLPLeave
+  else
+    " ok, defer removal to when we re-enter the focus buffer
+    augroup preview_leave_cleanup
+      autocmd!
+      execute "autocmd BufEnter <buffer=" . s:focus_bufnr .
+            \ "> delcommand -buffer VLPLeave | autocmd! preview_leave_cleanup"
+    augroup END
+  endif
+endfunction
+
+
 function! s:LeavePreviewMode()
   autocmd! preview_mode
   autocmd! preview_mode_exit
-  execute 'bwipe ' . s:preview_bufnr
-  delcommand VLPLeave
+  call s:CleanUpLeaveCommand()
   let s:preview_bufnr = -1
+  let s:focus_bufnr = -1
   let s:func = ""
   if s:ChangeUpdateTime()
     let &updatetime = s:updatetime_restore
   endif
+  call s:Print("Left preview mode.")
 endfunction
 
 
 function! s:CreatePreviewBuffer()
   vertical new VimLivePreview
   let l:bufnr = bufnr()
-  " setup scratch-buffer
-  setlocal bufhidden=hide
+
+  setlocal nobuflisted
+  setlocal bufhidden=delete
   setlocal buftype=nofile
   setlocal noswapfile
-
   setlocal autoread
+
   augroup preview_mode_exit
     autocmd!
-    " TODO: bug: if the window is closed via <c-w>O, an empty buffer remains
     autocmd WinClosed,BufDelete <buffer> call s:LeavePreviewMode()
   augroup END
   wincmd p " go back to the previous window
@@ -83,10 +100,12 @@ endfunction
 "       - etc.
 function! vlp#EnterPreviewMode(func)
   if s:preview_bufnr != -1
-    call PrintError("Already in preview mode.")
+    call s:PrintError("Already in preview mode.")
     return
   endif
 
+  only " close all windows except the current one TODO: option
+  let s:focus_bufnr = bufnr()
   let s:preview_bufnr = s:CreatePreviewBuffer()
   let s:func = a:func " TODO: also add support for cmds
   call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
@@ -95,7 +114,7 @@ function! vlp#EnterPreviewMode(func)
     autocmd TextChanged,TextChangedI <buffer>
           \ call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
           \ | checktime
-    autocmd BufDelete <buffer> call s:LeavePreviewMode()
+    autocmd WinClosed,BufUnload <buffer> call s:LeavePreviewMode()
   augroup END
   command! -buffer -nargs=0  VLPLeave call s:LeavePreviewMode()
 
@@ -103,4 +122,5 @@ function! vlp#EnterPreviewMode(func)
     let s:updatetime_restore = &updatetime
     let &updatetime = s:UpdateInterval()
   endif
+  call s:Print("Entered preview mode.")
 endfunction
