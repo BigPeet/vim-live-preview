@@ -4,7 +4,7 @@ endif
 let g:autoloaded_vim_live_preview = 1
 
 " Script variables and constants
-let s:tmpfile = ""
+let s:preview_bufnr = -1
 let s:func = ""
 let s:updatetime_restore = &updatetime
 
@@ -34,12 +34,9 @@ endfunction
 function! s:LeavePreviewMode()
   autocmd! preview_mode
   autocmd! preview_mode_exit
-  " TODO: this might complain if buffer 'is in use'
-  " TODO: this might not close the window
-  " reproduce: open a file, enter preview mode, delete the scratch buffer
-  execute 'bwipe ' . fnameescape(s:tmpfile)
+  execute 'bwipe ' . s:preview_bufnr
   delcommand VLPLeave
-  let s:tmpfile = ""
+  let s:preview_bufnr = -1
   let s:func = ""
   if s:ChangeUpdateTime()
     let &updatetime = s:updatetime_restore
@@ -47,35 +44,61 @@ function! s:LeavePreviewMode()
 endfunction
 
 
+function! s:CreatePreviewBuffer()
+  vertical new VimLivePreview
+  let l:bufnr = bufnr()
+  " setup scratch-buffer
+  setlocal bufhidden=hide
+  setlocal buftype=nofile
+  setlocal noswapfile
+
+  setlocal autoread
+  augroup preview_mode_exit
+    autocmd!
+    " TODO: bug: if the window is closed via <c-w>O, an empty buffer remains
+    autocmd WinClosed,BufDelete <buffer> call s:LeavePreviewMode()
+  augroup END
+  wincmd p " go back to the previous window
+  return l:bufnr
+endfunction
+
+
+function! s:ClearPreviewBuffer(bufnr)
+  silent call deletebufline(a:bufnr, 1, "$")
+endfunction
+
+
+function! s:WritePreviewBuffer(bufnr, lines)
+  silent call s:ClearPreviewBuffer(a:bufnr)
+  silent call setbufline(a:bufnr, 1, a:lines)
+endfunction
+
+
 " Main functions
-" TODO: accept an optional dictionary of options,
-"       e.g. ft of the preview buffer
+" TODO: accept an optional dictionary of options, e.g.:
+"       - ft of the preview buffer
+"       - name of the preview buffer
+"       - function or command
+"       - fname, content or nothing as argument to func
+"       - etc.
 function! vlp#EnterPreviewMode(func)
-  if s:tmpfile != ""
+  if s:preview_bufnr != -1
     call PrintError("Already in preview mode.")
     return
   endif
 
-  let s:tmpfile = tempname()
+  let s:preview_bufnr = s:CreatePreviewBuffer()
   let s:func = a:func " TODO: also add support for cmds
-  call writefile(s:func(1, line("$")), s:tmpfile) " create initial file
+  call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
   augroup preview_mode
     autocmd!
     autocmd TextChanged,TextChangedI <buffer>
-          \ call writefile(s:func(1, line("$")), fnameescape(s:tmpfile))
+          \ call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
           \ | checktime
     autocmd BufDelete <buffer> call s:LeavePreviewMode()
   augroup END
   command! -buffer -nargs=0  VLPLeave call s:LeavePreviewMode()
-  " TODO: move 'scratch' buffer setup into separate function
-  execute 'vs' fnameescape(s:tmpfile)
-  setlocal autoread
-  setlocal readonly
-  augroup preview_mode_exit
-    autocmd!
-    autocmd WinClosed,BufDelete <buffer> call s:LeavePreviewMode()
-  augroup END
-  wincmd p " go back to previous window
+
   if s:ChangeUpdateTime()
     let s:updatetime_restore = &updatetime
     let &updatetime = s:UpdateInterval()
