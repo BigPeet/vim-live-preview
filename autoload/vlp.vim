@@ -86,6 +86,7 @@ endfunction
 
 
 function! s:WritePreviewBuffer(bufnr, lines)
+  " TODO: save and restore cursor position
   silent call s:ClearPreviewBuffer(a:bufnr)
   silent call setbufline(a:bufnr, 1, a:lines)
 endfunction
@@ -122,5 +123,4 @@ function! vlp#EnterPreviewMode(func)
     let s:updatetime_restore = &updatetime
     let &updatetime = s:UpdateInterval()
   endif
-  call s:Print("Entered preview mode.")
 endfunction
