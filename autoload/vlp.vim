@@ -34,8 +34,11 @@ endfunction
 function! s:LeavePreviewMode()
   autocmd! preview_mode
   autocmd! preview_mode_exit
+  " TODO: this might complain if buffer 'is in use'
+  " TODO: this might not close the window
+  " reproduce: open a file, enter preview mode, delete the scratch buffer
   execute 'bwipe ' . fnameescape(s:tmpfile)
-  delcommand LeavePreviewMode
+  delcommand VLPLeave
   let s:tmpfile = ""
   let s:func = ""
   if s:ChangeUpdateTime()
@@ -54,8 +57,8 @@ function! vlp#EnterPreviewMode(func)
   endif
 
   let s:tmpfile = tempname()
-  let s:func = function(a:func) " TODO: also add support for cmds
-  call writefile([""], s:tmpfile) " create empty file
+  let s:func = a:func " TODO: also add support for cmds
+  call writefile(s:func(1, line("$")), s:tmpfile) " create initial file
   augroup preview_mode
     autocmd!
     autocmd TextChanged,TextChangedI <buffer>
@@ -63,7 +66,7 @@ function! vlp#EnterPreviewMode(func)
           \ | checktime
     autocmd BufDelete <buffer> call s:LeavePreviewMode()
   augroup END
-  command! -buffer -nargs=0  LeavePreviewMode call s:LeavePreviewMode()
+  command! -buffer -nargs=0  VLPLeave call s:LeavePreviewMode()
   " TODO: move 'scratch' buffer setup into separate function
   execute 'vs' fnameescape(s:tmpfile)
   setlocal autoread
