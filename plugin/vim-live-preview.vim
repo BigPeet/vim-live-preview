@@ -10,4 +10,4 @@ function! VLPTestFunction(start, end)
 endfunction
 
 command! -nargs=1 -complete=function VLP call vlp#EnterPreviewMode(function(<f-args>))
-command! -nargs=1 -complete=function VLP2 call vlp#EnterPreviewMode(<f-args>)
+command! -nargs=1 -complete=command VLPAnything call vlp#EnterPreviewMode(<f-args>)
