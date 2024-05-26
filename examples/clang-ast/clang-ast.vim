@@ -24,6 +24,10 @@ function! s:CreateAST(start, end)
   return split(l:out, "\n")
 endfunction
 
+autocmd FileType c,cpp command! -range=% CreateAST echo join(s:CreateAST(<line1>, <line2>), "\n")
+
 if &rtp =~ 'vim-live-preview'
   autocmd FileType c,cpp command! VLPAst call vlp#EnterPreviewMode(function("s:CreateAST"))
+  autocmd FileType c,cpp command! VLPAstCmd call vlp#EnterPreviewMode("CreateAST")
+  autocmd FileType c,cpp command! VLPAstShell call vlp#EnterPreviewMode('!clang -fsyntax-only -Xclang -ast-dump ' . shellescape(expand('%:p')))
 endif

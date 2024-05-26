@@ -1,7 +1,7 @@
-if exists('g:clang_ast_loaded') || &cp || version < 700
+if exists('g:clang_preprocessor_loaded') || &cp || version < 700
   finish
 endif
-let g:clang_ast_loaded = 1
+let g:clang_preprocessor_loaded = 1
 
 if !executable("clang")
   finish
@@ -24,6 +24,10 @@ function! s:Preprocess(start, end)
   return l:lines
 endfunction
 
+autocmd FileType c,cpp command! -range=% PreprocessLines echo join(s:Preprocess(<line1>, <line2>), "\n")
+
 if &rtp =~ 'vim-live-preview'
   autocmd FileType c,cpp command! VLPPreprocessor call vlp#EnterPreviewMode(function("s:Preprocess"))
+  autocmd FileType c,cpp command! VLPPreprocessorCmd call vlp#EnterPreviewMode(":PreprocessLines")
+  autocmd FileType c,cpp command! VLPPreprocessorShell call vlp#EnterPreviewMode('!clang -E ' . shellescape(expand('%:p')))
 endif
