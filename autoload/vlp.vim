@@ -137,7 +137,7 @@ function! vlp#EnterPreviewMode(functor)
   endif
 
   let s:func = s:GetFunction(a:functor)
-  let s:cmd = type(a:functor) == v:t_string ? a:functor : ''
+  let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
 
   only " close all windows except the current one TODO: option
   let s:focus_bufnr = bufnr()
