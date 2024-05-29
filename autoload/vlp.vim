@@ -9,19 +9,15 @@ let s:focus_bufnr = -1
 let s:func = 0
 let s:cmd = ""
 let s:updatetime_restore = &updatetime
-
-" These options are intended for non-global but rather-command specific
-" options. E.g., which filetype the preview buffer should have.
-" It does not make sense to let a user set this globally as this differs
-" from use case to use case.
-let s:default_options = {
-      \ 'ft': '',
-      \ }
 let s:options = {}
 
 " Getter functions for 'global' options
+"  - If the option is not directly set by the user,
+"      it will fallback to the global variable.
+"  - If the global variable is not set,
+"      it will fallback to the default value.
 function! s:GetOption(name, default)
-  return get(g:, 'vim_live_preview_' . a:name, get(s:options, a:name, a:default))
+  return get(s:options, a:name, get(g:, 'vlp_' . a:name, a:default))
 endfunction
 
 function! s:ChangeUpdateTime()
@@ -86,7 +82,7 @@ function! s:CreatePreviewBuffer()
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal autoread
-  exec "set ft=" . s:options["ft"]
+  exec "set ft=" . s:GetOption('preview_buffer_filetype', '')
 
   augroup preview_mode_exit
     autocmd!
@@ -152,12 +148,7 @@ function! vlp#EnterPreviewMode(functor, ...)
     return
   endif
 
-  let s:options = s:default_options
-
-  " parse and populate options
-  let l:user_options = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
-  call extend(s:options, l:user_options)
-
+  let s:options = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
   let s:func = s:GetFunction(a:functor)
   let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
 

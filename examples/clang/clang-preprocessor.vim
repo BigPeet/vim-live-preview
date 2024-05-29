@@ -27,7 +27,11 @@ endfunction
 autocmd FileType c,cpp command! -range=% PreprocessLines echo join(s:Preprocess(<line1>, <line2>), "\n")
 
 if &rtp =~ 'vim-live-preview'
-  autocmd FileType c,cpp command! VLPPreprocessor call vlp#EnterPreviewMode(function("s:Preprocess"), {'ft': &ft})
-  autocmd FileType c,cpp command! VLPPreprocessorCmd call vlp#EnterPreviewMode(":PreprocessLines", {'ft': &ft})
-  autocmd FileType c,cpp command! VLPPreprocessorShell call vlp#EnterPreviewMode('!clang -E ' . shellescape(expand('%:p')), {'ft': &ft})
+  autocmd FileType c,cpp command! VLPPreprocessor
+        \ call vlp#EnterPreviewMode(function("s:Preprocess"), {'preview_buffer_filetype': &ft})
+  autocmd FileType c,cpp command! VLPPreprocessorCmd
+        \ call vlp#EnterPreviewMode(":PreprocessLines", {'preview_buffer_filetype': &ft})
+  autocmd FileType c,cpp command! VLPPreprocessorShell
+        \ call vlp#EnterPreviewMode('!clang -E ' . shellescape(expand('%:p')),
+              \ {'preview_buffer_filetype': &ft})
 endif
