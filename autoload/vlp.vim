@@ -10,13 +10,26 @@ let s:func = 0
 let s:cmd = ""
 let s:updatetime_restore = &updatetime
 
-" Getter functions for Options
+" These options are intended for non-global but rather-command specific
+" options. E.g., which filetype the preview buffer should have.
+" It does not make sense to let a user set this globally as this differs
+" from use case to use case.
+let s:default_options = {
+      \ 'ft': '',
+      \ }
+let s:options = {}
+
+" Getter functions for 'global' options
+function! s:GetOption(name, default)
+  return get(g:, 'vim_live_preview_' . a:name, get(s:options, a:name, a:default))
+endfunction
+
 function! s:ChangeUpdateTime()
-  return get(g:, 'vim_live_preview_change_updatetime', v:true)
+  return s:GetOption('change_updatetime', v:true)
 endfunction
 
 function! s:UpdateInterval()
-  return get(g:, 'vim_live_preview_update_interval', 250)
+  return s:GetOption('update_interval', 250)
 endfunction
 
 
@@ -73,6 +86,7 @@ function! s:CreatePreviewBuffer()
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal autoread
+  exec "set ft=" . s:options["ft"]
 
   augroup preview_mode_exit
     autocmd!
@@ -125,16 +139,24 @@ endfunction
 
 " Main functions
 " TODO: accept an optional dictionary of options, e.g.:
-"       - ft of the preview buffer
 "       - name of the preview buffer
 "       - fname, content (range) and/or nothing as argument to func/cmd
 "         - if the fname is given, the trigger needs to happen on save
 "       - etc.
-function! vlp#EnterPreviewMode(functor)
+" Entry point for 'plugins'
+"   - accepts a function or a command
+"   - optionally a dictionary with options (see ...)
+function! vlp#EnterPreviewMode(functor, ...)
   if s:preview_bufnr != -1
     call s:PrintError("Already in preview mode.")
     return
   endif
+
+  let s:options = s:default_options
+
+  " parse and populate options
+  let l:user_options = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
+  call extend(s:options, l:user_options)
 
   let s:func = s:GetFunction(a:functor)
   let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
