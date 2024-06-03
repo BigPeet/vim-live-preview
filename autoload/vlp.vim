@@ -15,7 +15,8 @@ let s:default_options = {
       \ 'update_interval': 250,
       \ 'preview_buffer_filetype': '',
       \ 'preview_buffer_name': 'VimLivePreview',
-      \ 'trigger_events': ["TextChanged", "TextChangedI"],
+      \ 'input': 'range',
+      \ 'trigger_events': ["TextChanged", "TextChangedI", "TextChangedP",],
       \ }
 
 " Getter functions for 'global' options
@@ -108,28 +109,63 @@ function! s:GetFunction(func)
 endfunction
 
 
+function! s:GetParams()
+  let l:input = s:GetOption('input')
+  if l:input == 'range'
+    let l:params = "1, line('$')"
+  elseif l:input == 'buffer'
+    let l:params = "bufnr('%')"
+  elseif l:input == 'fname'
+    let l:params = "shellescape(expand('%:p'))"
+  elseif l:input == 'none' || l:input == ''
+    let l:params = ""
+  else
+    call s:PrintError("Invalid input option: " . l:input)
+  endif
+  return l:params
+endfunction
+
+function! s:ParamtrisedCommand(cmd, args)
+  let l:input = s:GetOption('input')
+  let l:cmd_prefix = ""
+  let l:cmd_suffix = ""
+
+  if l:input == 'range'
+    let l:cmd_prefix = a:args[0] . "," . a:args[1]
+  elseif l:input == 'buffer' || l:input == 'fname'
+    let l:cmd_suffix = a:args[0]
+  elseif l:input == 'none' || l:input == ''
+    " do nothing
+  else
+    call s:PrintError("Invalid input option: " . l:input)
+  endif
+  return l:cmd_prefix . a:cmd . " " . l:cmd_suffix
+endfunction
+
+
 function! s:SetupWriteFunction()
+  let l:call = "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" .
+        \ s:GetParams() . "))"
+
   " Initial write
-  call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
+  exec l:call
 
   " Continuous write
   augroup preview_mode
     autocmd!
     exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
-          \ "call s:WritePreviewBuffer(s:preview_bufnr, " .
-          \ "s:func(1, line(\"$\"))) " .
-          \ "| checktime"
+          \ l:call . " | checktime"
   augroup END
 endfunction
 
 
-" either change to ... or create different functions for different input options
-function! s:LiteralWrite(start, end)
+function! s:LiteralWrite(...)
+  let l:cmd = s:ParamtrisedCommand(s:cmd, a:000)
   if fullcommand(s:cmd) == '!'
     " external command
-    return split(system(substitute(s:cmd, '^:\?!', '', '')), "\n")
+    return split(system(substitute(l:cmd, '^:\?!', '', '')), "\n")
   else
-    return split(execute(s:cmd), "\n")
+    return split(execute(l:cmd), "\n")
   endif
 endfunction
 
