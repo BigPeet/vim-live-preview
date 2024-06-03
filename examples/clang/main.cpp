@@ -14,5 +14,6 @@ int main() {
     S s{FOO};
     char c = '0';
     double d{0.0};
-    return s.x + c + d + Foo();
+    char const *str = "Hello";
+    return s.x + c + d + Foo() + str[0];
 }

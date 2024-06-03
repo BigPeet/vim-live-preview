@@ -118,6 +118,8 @@ function! s:GetParams()
     let l:params = "bufnr('%')"
   elseif l:input == 'fname'
     let l:params = "shellescape(expand('%:p'))"
+  elseif l:input == 'content'
+    let l:params = "escape(join(getline(1, '$'), '\n'), '\"')"
   elseif l:input == 'none' || l:input == ''
     let l:params = ""
   else
@@ -135,6 +137,8 @@ function! s:ParameterizedCommand(cmd, args)
     let l:cmd_prefix = a:args[0] . "," . a:args[1]
   elseif l:input == 'buffer' || l:input == 'fname'
     let l:cmd_suffix = a:args[0]
+  elseif l:input == 'content'
+    let l:cmd_suffix = '"' . a:args[0] . '"'
   elseif l:input == 'none' || l:input == ''
     " do nothing
   else
@@ -146,8 +150,9 @@ endfunction
 
 function! s:FunctionWrite(...)
   if a:0 < 3 && a:0 >= 0
-    exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" .
-          \ join(a:000, ',') . "))"
+    let l:quote = s:GetOption('input') == 'content' ? '"' : ''
+    exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" . l:quote .
+          \ join(a:000, ',') . l:quote . "))"
   else
     call s:PrintError("Invalid number of arguments.")
   endif
@@ -181,19 +186,35 @@ endfunction
 
 
 function! s:CommandWrite(...)
-  let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
+  " TODO: split external and internal commands into two functions
   if fullcommand(s:cmd) == '!'
     " external shell command
-    let l:cmd = substitute(l:cmd, '^:\?!', '', '')
+    let l:cmd = substitute(s:cmd, '^:\?!', '', '')
+    let l:input = s:GetOption('input')
+    if l:input == 'buffer' || l:input == 'fname'
+      let l:cmd = l:cmd . " " . a:1
+    endif
+
     if exists("*job_start") " TODO: neovim support: jobstart
       let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
       " preview buffer will be written in callback
       let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})
+      if l:input == 'content'
+        let l:channel = job_getchannel(s:job)
+        call ch_sendraw(l:channel, substitute(a:1, '\\"', '"', 'g'))
+        call ch_close_in(l:channel)
+      endif
       return
     else
-      let l:lines = split(system(l:cmd), "\n")
+      if l:input == 'content'
+        let l:lines = split(system(l:cmd, substitute(a:1, '\\"', '"', 'g')), "\n")
+      else
+        let l:lines = split(system(l:cmd), "\n")
+      endif
     endif
   else
+    " internal vim command
+    let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
     let l:lines = split(execute(l:cmd), "\n")
   endif
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
@@ -206,10 +227,6 @@ endfunction
 
 
 " Main functions
-" TODO: accept an optional dictionary of options, e.g.:
-"       - fname, content (range) and/or nothing as argument to func/cmd
-"         - if the fname is given, the trigger needs to happen on save
-"       - etc.
 " Entry point for 'plugins'
 "   - accepts a function or a command
 "   - optionally a dictionary with options (see ...)

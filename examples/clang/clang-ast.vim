@@ -35,9 +35,16 @@ if &rtp =~ 'vim-live-preview'
   autocmd FileType c,cpp command! VLPAstCmd call vlp#EnterPreviewMode("CreateAST", s:ast_options)
   autocmd FileType c,cpp command! VLPAstShell call
         \ vlp#EnterPreviewMode('!clang -fsyntax-only -Xclang -ast-dump ',
-        \   extend(s:ast_options,
+        \   extend(copy(s:ast_options),
         \     {
         \       'input': 'fname',
         \       'trigger_events': ['BufWritePost'],
+        \     }))
+  autocmd FileType c,cpp command! VLPAstShellContent
+        \ call vlp#EnterPreviewMode('!clang -fsyntax-only -x ' .
+        \   ( &ft ==# 'c' ? 'c' : "c++" ) . ' -Xclang -ast-dump /dev/stdin',
+        \   extend(copy(s:ast_options),
+        \     {
+        \       'input': 'content',
         \     }))
 endif

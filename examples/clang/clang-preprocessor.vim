@@ -58,6 +58,21 @@ function! s:PreprocessFile()
 endfunction
 
 
+function! s:PreprocessContent(content)
+  let l:lang = 'c++'
+  if &ft ==# 'c'
+    let l:lang = 'c'
+  endif
+  let l:cmd = "clang -E -x " . l:lang . " /dev/stdin"
+  let l:out = system(l:cmd, a:content)
+  " filter out stuff not relevant to the file
+  " e.g.
+  let l:lines = split(l:out, "\n")
+  call filter(l:lines, 'v:val !~? "^# [0-9]"')
+  return l:lines
+endfunction
+
+
 autocmd FileType c,cpp command! -range=% Preprocess
       \ echo join(s:Preprocess(<line1>, <line2>), "\n")
 
@@ -66,6 +81,9 @@ autocmd FileType c,cpp command! -nargs=1 PreprocessBuffer
 
 autocmd FileType c,cpp command! PreprocessFile
       \ echo join(s:PreprocessFile(), "\n")
+
+autocmd FileType c,cpp command! -nargs=1 PreprocessContent
+      \ echo join(s:PreprocessContent(<args>), "\n")
 
 
 " Check if the vim-live-preview plugin is installed
@@ -84,43 +102,62 @@ if &rtp =~ 'vim-live-preview'
         \ )
   autocmd FileType c,cpp command! VLPPreprocessorBuffer
         \ call vlp#EnterPreviewMode(function("s:PreprocessBuffer"),
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'input': 'buffer',
         \ }))
   autocmd FileType c,cpp command! VLPPreprocessorFile
         \ call vlp#EnterPreviewMode(function("s:PreprocessFile"),
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'input': 'none',
         \   'trigger_events': ['BufWritePost'],
         \ }))
+  autocmd FileType c,cpp command! VLPPreprocessorContent
+        \ call vlp#EnterPreviewMode(function("s:PreprocessContent"),
+        \ extend(copy(s:common_options),
+        \ {
+        \   'input': 'content',
+        \ }))
   autocmd FileType c,cpp command! VLPPreprocessorCmd
         \ call vlp#EnterPreviewMode(":Preprocess",
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'trigger_events':
         \     vlp#DefaultOptions()['trigger_events'] + ['CursorHold'],
         \ }))
   autocmd FileType c,cpp command! VLPPreprocessorBufferCmd
         \ call vlp#EnterPreviewMode(":PreprocessBuffer",
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'input': 'buffer',
         \ }))
   autocmd FileType c,cpp command! VLPPreprocessorFileCmd
         \ call vlp#EnterPreviewMode(":PreprocessFile",
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'input': 'none',
         \   'trigger_events': ['BufWritePost'],
         \ }))
+  autocmd FileType c,cpp command! VLPPreprocessorContentCmd
+        \ call vlp#EnterPreviewMode(":PreprocessContent",
+        \ extend(copy(s:common_options),
+        \ {
+        \   'input': 'content',
+        \ }))
   autocmd FileType c,cpp command! VLPPreprocessorShell
         \ call vlp#EnterPreviewMode('!clang -E -x ' .
         \   ( &ft ==# 'c' ? 'c' : "c++" ) . ' ',
-        \ extend(s:common_options,
+        \ extend(copy(s:common_options),
         \ {
         \   'input': 'fname',
         \   'trigger_events': ['BufWritePost'],
+        \ }))
+  autocmd FileType c,cpp command! VLPPreprocessorShellContent
+        \ call vlp#EnterPreviewMode('!clang -E -x ' .
+        \   ( &ft ==# 'c' ? 'c' : "c++" ) . ' /dev/stdin',
+        \ extend(copy(s:common_options),
+        \ {
+        \   'input': 'content',
         \ }))
 endif
