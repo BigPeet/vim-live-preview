@@ -8,6 +8,7 @@ let s:preview_bufnr = -1
 let s:focus_bufnr = -1
 let s:func = 0
 let s:cmd = ""
+let s:job = 0
 let s:updatetime_restore = &updatetime
 let s:options = {}
 let s:default_options = {
@@ -125,7 +126,7 @@ function! s:GetParams()
   return l:params
 endfunction
 
-function! s:ParamtrisedCommand(cmd, args)
+function! s:ParameterizedCommand(cmd, args)
   let l:input = s:GetOption('input')
   let l:cmd_prefix = ""
   let l:cmd_suffix = ""
@@ -143,30 +144,59 @@ function! s:ParamtrisedCommand(cmd, args)
 endfunction
 
 
-function! s:SetupWriteFunction()
-  let l:call = "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" .
-        \ s:GetParams() . "))"
+function! s:FunctionWrite(...)
+  if a:0 < 3 && a:0 >= 0
+    exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" .
+          \ join(a:000, ',') . "))"
+  else
+    call s:PrintError("Invalid number of arguments.")
+  endif
+endfunction
 
+
+function! s:SetupWriteFunction()
+  let l:write_callback = "call " .
+        \ (s:func != 0 ? "s:FunctionWrite(" : "s:CommandWrite(")
+        \ . s:GetParams() . ")"
   " Initial write
-  exec l:call
+  exec l:write_callback
 
   " Continuous write
   augroup preview_mode
     autocmd!
     exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
-          \ l:call . " | checktime"
+          \ l:write_callback . " | checktime"
   augroup END
 endfunction
 
 
-function! s:LiteralWrite(...)
-  let l:cmd = s:ParamtrisedCommand(s:cmd, a:000)
+function! s:CloseCallback(channel) abort
+  let l:lines = []
+  while ch_status(a:channel, {'part': 'out'}) == 'buffered'
+    let l:lines += [ch_read(a:channel)]
+  endwhile
+  unlet s:job
+  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
+endfunction
+
+
+function! s:CommandWrite(...)
+  let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
   if fullcommand(s:cmd) == '!'
-    " external command
-    return split(system(substitute(l:cmd, '^:\?!', '', '')), "\n")
+    " external shell command
+    let l:cmd = substitute(l:cmd, '^:\?!', '', '')
+    if exists("*job_start") " TODO: neovim support: jobstart
+      let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
+      " preview buffer will be written in callback
+      let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})
+      return
+    else
+      let l:lines = split(system(l:cmd), "\n")
+    endif
   else
-    return split(execute(l:cmd), "\n")
+    let l:lines = split(execute(l:cmd), "\n")
   endif
+  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
 endfunction
 
 
@@ -193,6 +223,11 @@ function! vlp#EnterPreviewMode(functor, ...)
   let s:func = s:GetFunction(a:functor)
   let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
 
+  if s:func == 0 && s:cmd == ''
+    call s:PrintError("Invalid argument: " . a:functor)
+    return
+  endif
+
   only " close all windows except the current one TODO: option
   let s:focus_bufnr = bufnr()
   let s:preview_bufnr = s:CreatePreviewBuffer()
@@ -210,10 +245,5 @@ function! vlp#EnterPreviewMode(functor, ...)
   command! -buffer -nargs=0  VLPLeave execute "bdelete" . s:preview_bufnr
 
   " Setup write function
-  if s:cmd != ''
-    let s:func = function('s:LiteralWrite')
-  endif
-  if s:func != 0
-    call s:SetupWriteFunction()
-  endif
+  call s:SetupWriteFunction()
 endfunction
