@@ -27,18 +27,33 @@ endfunction
 autocmd FileType c,cpp command! -range=% PreprocessLines
       \ echo join(s:Preprocess(<line1>, <line2>), "\n")
 
+" Check if the vim-live-preview plugin is installed
 if &rtp =~ 'vim-live-preview'
+
+  " Various examples how to hook into the preview system
+  " 1. Use a function to generate the preview
+  " 2. Use a command to generate the preview
+  " 3. Use a shell command to generate the preview
+  " Usage of the option dictionary is also show cased.
   autocmd FileType c,cpp command! VLPPreprocessor
         \ call vlp#EnterPreviewMode(function("s:Preprocess"),
-        \ {'preview_buffer_filetype': &ft,
-        \ 'trigger_events': vlp#DefaultOptions()['trigger_events']})
+        \ {
+        \   'preview_buffer_filetype': &ft,
+        \   'preview_buffer_name': 'Preprocessed ' . expand('%:t'),
+        \   'trigger_events': vlp#DefaultOptions()['trigger_events'],
+        \ })
   autocmd FileType c,cpp command! VLPPreprocessorCmd
         \ call vlp#EnterPreviewMode(":PreprocessLines",
-        \ {'preview_buffer_filetype': &ft,
-        \ 'trigger_events':
-        \    vlp#DefaultOptions()['trigger_events'] + ['CursorHold']})
+        \ {
+        \   'preview_buffer_filetype': &ft,
+        \   'preview_buffer_name': 'Preprocessed',
+        \   'trigger_events':
+        \     vlp#DefaultOptions()['trigger_events'] + ['CursorHold'],
+        \ })
   autocmd FileType c,cpp command! VLPPreprocessorShell
         \ call vlp#EnterPreviewMode('!clang -E ' . shellescape(expand('%:p')),
-        \ {'preview_buffer_filetype': &ft,
-        \ 'trigger_events': ['BufWritePost']})
+        \ {
+        \   'preview_buffer_filetype': &ft,
+        \   'trigger_events': ['BufWritePost'],
+        \ })
 endif

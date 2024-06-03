@@ -14,6 +14,7 @@ let s:default_options = {
       \ 'change_updatetime': v:true,
       \ 'update_interval': 250,
       \ 'preview_buffer_filetype': '',
+      \ 'preview_buffer_name': 'VimLivePreview',
       \ 'trigger_events': ["TextChanged", "TextChangedI"],
       \ }
 
@@ -72,7 +73,7 @@ endfunction
 
 
 function! s:CreatePreviewBuffer()
-  vertical new VimLivePreview
+  exec "vertical new " . s:GetOption('preview_buffer_name')
   let l:bufnr = bufnr()
 
   setlocal nobuflisted
@@ -116,11 +117,13 @@ function! s:SetupWriteFunction()
     autocmd!
     exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
           \ "call s:WritePreviewBuffer(s:preview_bufnr, " .
-          \ "s:func(1, line(\"$\"))) | checktime"
+          \ "s:func(1, line(\"$\"))) " .
+          \ "| checktime"
   augroup END
 endfunction
 
 
+" either change to ... or create different functions for different input options
 function! s:LiteralWrite(start, end)
   if fullcommand(s:cmd) == '!'
     " external command
@@ -138,7 +141,6 @@ endfunction
 
 " Main functions
 " TODO: accept an optional dictionary of options, e.g.:
-"       - name of the preview buffer
 "       - fname, content (range) and/or nothing as argument to func/cmd
 "         - if the fname is given, the trigger needs to happen on save
 "       - etc.
