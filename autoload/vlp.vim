@@ -10,24 +10,22 @@ let s:func = 0
 let s:cmd = ""
 let s:updatetime_restore = &updatetime
 let s:options = {}
+let s:default_options = {
+      \ 'change_updatetime': v:true,
+      \ 'update_interval': 250,
+      \ 'preview_buffer_filetype': '',
+      \ 'trigger_events': ["TextChanged", "TextChangedI"],
+      \ }
 
 " Getter functions for 'global' options
 "  - If the option is not directly set by the user,
 "      it will fallback to the global variable.
 "  - If the global variable is not set,
 "      it will fallback to the default value.
-function! s:GetOption(name, default)
-  return get(s:options, a:name, get(g:, 'vlp_' . a:name, a:default))
+function! s:GetOption(name)
+  return get(s:options, a:name,
+       \ get(g:, 'vlp_' . a:name, s:default_options[a:name]))
 endfunction
-
-function! s:ChangeUpdateTime()
-  return s:GetOption('change_updatetime', v:true)
-endfunction
-
-function! s:UpdateInterval()
-  return s:GetOption('update_interval', 250)
-endfunction
-
 
 " Print functions
 function! s:Print(msg)
@@ -66,7 +64,7 @@ function! s:LeavePreviewMode()
   let s:focus_bufnr = -1
   let s:func = 0
   let s:cmd = ""
-  if s:ChangeUpdateTime()
+  if s:GetOption('change_updatetime')
     let &updatetime = s:updatetime_restore
   endif
   call s:Print("Left preview mode.")
@@ -82,7 +80,7 @@ function! s:CreatePreviewBuffer()
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal autoread
-  exec "set ft=" . s:GetOption('preview_buffer_filetype', '')
+  exec "set ft=" . s:GetOption('preview_buffer_filetype')
 
   augroup preview_mode_exit
     autocmd!
@@ -116,9 +114,9 @@ function! s:SetupWriteFunction()
   " Continuous write
   augroup preview_mode
     autocmd!
-    autocmd TextChanged,TextChangedI <buffer>
-          \ call s:WritePreviewBuffer(s:preview_bufnr, s:func(1, line("$")))
-          \ | checktime
+    exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
+          \ "call s:WritePreviewBuffer(s:preview_bufnr, " .
+          \ "s:func(1, line(\"$\"))) | checktime"
   augroup END
 endfunction
 
@@ -130,6 +128,11 @@ function! s:LiteralWrite(start, end)
   else
     return split(execute(s:cmd), "\n")
   endif
+endfunction
+
+
+function! vlp#DefaultOptions()
+  return deepcopy(s:default_options)
 endfunction
 
 
@@ -156,9 +159,9 @@ function! vlp#EnterPreviewMode(functor, ...)
   let s:focus_bufnr = bufnr()
   let s:preview_bufnr = s:CreatePreviewBuffer()
 
-  if s:ChangeUpdateTime()
+  if s:GetOption('change_updatetime')
     let s:updatetime_restore = &updatetime
-    let &updatetime = s:UpdateInterval()
+    let &updatetime = s:GetOption('update_interval')
   endif
 
   " Setup leave

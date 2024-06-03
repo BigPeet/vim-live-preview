@@ -24,14 +24,21 @@ function! s:Preprocess(start, end)
   return l:lines
 endfunction
 
-autocmd FileType c,cpp command! -range=% PreprocessLines echo join(s:Preprocess(<line1>, <line2>), "\n")
+autocmd FileType c,cpp command! -range=% PreprocessLines
+      \ echo join(s:Preprocess(<line1>, <line2>), "\n")
 
 if &rtp =~ 'vim-live-preview'
   autocmd FileType c,cpp command! VLPPreprocessor
-        \ call vlp#EnterPreviewMode(function("s:Preprocess"), {'preview_buffer_filetype': &ft})
+        \ call vlp#EnterPreviewMode(function("s:Preprocess"),
+        \ {'preview_buffer_filetype': &ft,
+        \ 'trigger_events': vlp#DefaultOptions()['trigger_events']})
   autocmd FileType c,cpp command! VLPPreprocessorCmd
-        \ call vlp#EnterPreviewMode(":PreprocessLines", {'preview_buffer_filetype': &ft})
+        \ call vlp#EnterPreviewMode(":PreprocessLines",
+        \ {'preview_buffer_filetype': &ft,
+        \ 'trigger_events':
+        \    vlp#DefaultOptions()['trigger_events'] + ['CursorHold']})
   autocmd FileType c,cpp command! VLPPreprocessorShell
         \ call vlp#EnterPreviewMode('!clang -E ' . shellescape(expand('%:p')),
-              \ {'preview_buffer_filetype': &ft})
+        \ {'preview_buffer_filetype': &ft,
+        \ 'trigger_events': ['BufWritePost']})
 endif
