@@ -17,7 +17,8 @@ let s:default_options = {
       \ 'preview_buffer_filetype': '',
       \ 'preview_buffer_name': 'VimLivePreview',
       \ 'input': 'range',
-      \ 'trigger_events': ["TextChanged", "TextChangedI", "TextChangedP",],
+      \ 'trigger_events': ['TextChanged', 'TextChangedI', 'TextChangedP',],
+      \ 'use_jobs': v:true,
       \ }
 
 " Getter functions for 'global' options
@@ -79,7 +80,7 @@ function! s:CreatePreviewBuffer()
   let l:bufnr = bufnr()
 
   setlocal nobuflisted
-  setlocal bufhidden=delete
+  setlocal bufhidden=wipe " or delete?
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal autoread
@@ -195,7 +196,8 @@ function! s:CommandWrite(...)
       let l:cmd = l:cmd . " " . a:1
     endif
 
-    if exists("*job_start") " TODO: neovim support: jobstart
+    " TODO: neovim support: jobstart
+    if exists("*job_start") && s:GetOption('use_jobs')
       let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
       " preview buffer will be written in callback
       let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})

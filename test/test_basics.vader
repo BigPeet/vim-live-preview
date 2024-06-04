@@ -1,0 +1,81 @@
+Include: setup.vader
+
+
+Execute (Define Test Helpers):
+  let g:def_preview_bufname = vlp#DefaultOptions()['preview_buffer_name']
+  function! DefaultStartupTest(is_async, ...)
+    Assert ! bufexists(g:def_preview_bufname)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    Assert bufexists(g:def_preview_bufname)
+    Assert (execute(":-1messages") !~ ".*Error:")
+    if a:is_async
+      sleep 100m " sleep since async jobs might need a moment
+    endif
+    AssertEqual "This is bar.",
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+    %s/This/foo/g
+    doautocmd TextChanged
+    if a:is_async
+      sleep 100m " sleep since async jobs might need a moment
+    endif
+    AssertEqual "bar is bar.",
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+  endfunction
+
+  function! AssertLeftPreviewModeAndWipedBuffer()
+    Assert (execute(":-1messages") =~# "Left preview mode.")
+    Assert ! bufexists(g:def_preview_bufname)
+    Assert ! exists(':VLPLeave')
+  endfunction
+
+
+Given (Foo Text):
+  This is foo.
+
+" TODO Check (in other files):
+" - FT option
+" - Buffername option
+" - updatetime options
+" - trigger event options
+" - For every F (of Function, FuncRef, Cmd, Shell)
+"   - test every "input" type
+
+Execute (Default with FuncRef):
+  call DefaultStartupTest(0, "function('VLPTestFunctionRange')")
+
+Execute (Default with Function Name):
+  call DefaultStartupTest(0, "'VLPTestFunctionRange'")
+
+Execute (Default with Vim Command):
+  call DefaultStartupTest(0, "':VLPTestFunctionRangeCmd'")
+
+Execute (Default with Shell Command Job):
+  call DefaultStartupTest(1, "':!sed \"s/foo/bar/g\"'",
+    \ "{\"input\": \"content\"}")
+
+Execute (Default with Shell Command):
+  call DefaultStartupTest(0, "':!sed \"s/foo/bar/g\"'",
+    \ "{\"input\": \"content\", \"use_jobs\": \"v:false\"}")
+
+Execute (Double Startup):
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  Assert (execute(":-1messages") !~ ".*Error:")
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  Assert (execute(":-1messages") =~# ".*Error:")
+
+Execute (Close Preview Mode):
+  Assert ! bufexists(g:def_preview_bufname)
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  Assert bufexists(g:def_preview_bufname)
+  VLPLeave
+  call AssertLeftPreviewModeAndWipedBuffer()
+
+Execute (Double Close):
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  VLPLeave
+  AssertThrows VLPLeave
+
+Execute (Close Preview Window):
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  exec bufwinnr(g:def_preview_bufname) . "wincmd c"
+  call AssertLeftPreviewModeAndWipedBuffer()
