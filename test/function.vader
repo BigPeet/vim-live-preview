@@ -1,0 +1,28 @@
+Given cpp (Hello World Cpp):
+  #include <iostream>
+  int main() {
+    std::cout << "Hello, World!\n";
+    return 0;
+  }
+
+" Check:
+" - Setup a vim file which provides test functions and commands
+" - Start with Function, Cmd, Shell
+" - Double start
+" - Exit
+" - Simple window close
+" - Double Exit
+" - FT option
+" - Buffername option
+" - updatetime options
+" - trigger event options
+" - For every F (of Function, Cmd, Shell)
+"   - test every "input" type
+
+Execute (Test Example VLPPreprocessor):
+  AssertEqual -1, bufnr('Preprocessed')
+  :VLPPreprocessor
+  AssertNotEqual -1, bufnr('Preprocessed')
+  Assert (execute(":-1messages") !~ ".*Error:")
+  :VLPPreprocessor
+  Assert (execute(":-1messages") =~# ".*Error:")
