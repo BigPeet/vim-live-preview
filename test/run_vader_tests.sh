@@ -43,12 +43,14 @@ else
   TEST=$1
 fi
 
-echo "Tests to run: $TEST"
+echo "Tests to run:"
+for test_file in ${TEST}; do
+  echo "  $test_file"
+done
 
 START=$(date +%s)
 
 for test_file in ${TEST}; do
-  echo "Running test: $test_file"
   echo -en "Running test: $test_file ...\t"
   vader_out=$(vim -N -c "Vader! ${test_file}" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
@@ -85,4 +87,3 @@ else
   echo -e "\033[0;32m[TEST RUN SUCCEEDED]\033[0m"
   exit 0
 fi
-

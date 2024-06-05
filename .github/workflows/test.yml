@@ -27,15 +27,10 @@ jobs:
             git checkout ${{ matrix.vim-tag }}
             cd src/
             ./configure \
-              --disable-gpm \
-              --disable-nls \
-              --disable-sysmouse \
-              --enable-gui=no \
               --enable-multibyte \
               --enable-python3interp \
               --with-features=huge \
-              --with-tlib=ncurses \
-              --without-x
+              --with-tlib=ncurses
             make -j$(nproc)
             sudo make install
             vim --version
