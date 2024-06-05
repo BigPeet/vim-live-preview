@@ -1,0 +1,34 @@
+Include: setup.vader
+
+Execute (Input Test Helpers):
+  let g:dummy_text = "This is some static text."
+  function! NoneTest()
+    return [g:dummy_text]
+  endfunction
+  command! NoneTestCmd echo join(NoneTest(), "\n")
+
+  function! InputTest(is_async, expected, ...)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    if a:is_async
+      sleep 200m " sleep since async jobs might need a moment
+    endif
+    AssertEqual a:expected,
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+  endfunction
+
+# "none" Tests
+
+Execute (Input None: FuncRef):
+  call InputTest(0, g:dummy_text, 'function("NoneTest")', {"input": "none"})
+
+Execute (Input None: Function Name):
+  call InputTest(0, g:dummy_text, "'NoneTest'", {"input": "none"})
+
+Execute (Input None: Vim Command):
+  call InputTest(0, g:dummy_text, "':NoneTestCmd'", {"input": "none"})
+
+Execute (Input None: Shell Command Job):
+  call InputTest(1, g:dummy_text, "':!echo " . g:dummy_text . "'", {"input": "none"})
+
+Execute (Input None: Shell Command):
+  call InputTest(0, g:dummy_text, "':!echo " . g:dummy_text . "'", {"input": "none", "use_jobs": v:false})
