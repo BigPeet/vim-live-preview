@@ -7,6 +7,16 @@ Execute (Define Basic Test Helpers):
     Assert bufexists(g:def_preview_bufname)
     AssertNotEqual -1, bufwinnr(g:def_preview_bufname)
 
+    " assert properties of our preview buffer
+    Assert bufloaded(g:def_preview_bufname)
+    Assert !buflisted(g:def_preview_bufname)
+    AssertEqual "wipe", getbufvar(g:def_preview_bufname, "&bufhidden")
+    AssertEqual "nofile", getbufvar(g:def_preview_bufname, "&buftype")
+    Assert !getbufvar(g:def_preview_bufname, "&modifiable")
+    Assert !getbufvar(g:def_preview_bufname, "&swapfile")
+    Assert getbufvar(g:def_preview_bufname, "&autoread")
+    AssertEqual '', getbufvar(g:def_preview_bufname, "&ft")
+
     if a:is_async
       sleep 100m " sleep since async jobs might need a moment
     endif

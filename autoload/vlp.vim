@@ -93,6 +93,7 @@ function! s:CreatePreviewBuffer(bufname)
   setlocal bufhidden=wipe " or delete?
   setlocal buftype=nofile
   setlocal noswapfile
+  setlocal nomodifiable " TODO: option to let it be modifiable
   setlocal autoread
   exec "set ft=" . s:GetOption('preview_buffer_filetype')
 
@@ -106,8 +107,10 @@ endfunction
 
 
 function! s:WritePreviewBuffer(bufnr, lines)
+  silent call setbufvar(a:bufnr, '&modifiable', v:true)
   silent call setbufline(a:bufnr, 1, a:lines)
   silent call deletebufline(a:bufnr, len(a:lines) + 1, "$")
+  silent call setbufvar(a:bufnr, '&modifiable', v:false)
 endfunction
 
 
