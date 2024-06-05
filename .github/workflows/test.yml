@@ -18,6 +18,10 @@ jobs:
         - uses: actions/checkout@v2
           with:
             fetch-depth: 0
+        - name: Install dependencies
+          run: |
+            sudo apt-get update
+            sudo apt-get install python3-dev
         - name: Clone Vim
           run: |
             git clone https://github.com/vim/vim.git
