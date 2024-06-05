@@ -2,7 +2,7 @@
 
 SCRIPT_NAME=$0
 SCRIPT_DIR=$(dirname $SCRIPT_NAME)
-PLUGIN_DIR=$SCRIPT_DIR
+PLUGIN_DIR=$(dirname $SCRIPT_DIR)
 
 function print_vader_output() {
   if [ $VERBOSE -eq 0 ]; then
@@ -44,7 +44,7 @@ start=$(date +%s)
 
 for test_file in ${TEST}; do
   echo -en "Running test: $test_file ...\t"
-  vader_out=$(vim -N -c "Vader! ${PLUGIN_DIR}/${test_file}" 2>&1 > /dev/null)
+  vader_out=$(vim -N -c "Vader! ${test_file}" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
     FAILED+=($test_file)
     echo "FAILED"
