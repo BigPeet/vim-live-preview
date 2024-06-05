@@ -7,8 +7,6 @@ SCRIPT_NAME=$0
 SCRIPT_DIR=$(dirname $SCRIPT_NAME)
 PLUGIN_DIR=$(dirname $SCRIPT_DIR)
 
-echo "Running Vader tests for plugin: $PLUGIN_DIR"
-
 function print_vader_output() {
   if [ $VERBOSE -eq 0 ]; then
     return
@@ -36,8 +34,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "Verbose: $VERBOSE"
-
 FAILED=()
 SUCCEEDED=()
 
@@ -47,7 +43,9 @@ else
   TEST=$1
 fi
 
-start=$(date +%s)
+echo "Tests to run: $TEST"
+
+START=$(date +%s)
 
 for test_file in ${TEST}; do
   echo -en "Running test: $test_file ...\t"
@@ -63,7 +61,7 @@ for test_file in ${TEST}; do
   fi
 done
 
-end=$(date +%s)
+END=$(date +%s)
 
 echo
 echo "SUMMARY:"
@@ -77,7 +75,7 @@ for (( i = 0; i < ${#FAILED[@]}; i++ )); do
 done
 echo
 
-echo "Time elapsed: $((end-start)) seconds"
+echo "Time elapsed: $((END-START)) seconds"
 
 if [ ${#FAILED[@]} -gt 0 ]; then
   echo -e "\033[0;31m[TEST RUN FAILED]\033[0m"
