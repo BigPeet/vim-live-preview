@@ -68,7 +68,7 @@ END=$(date +%s)
 
 echo
 echo "SUMMARY:"
-echo "Succeeded tests:"
+echo "Successful tests:"
 for test_file in ${SUCCEEDED[@]}; do
   echo "  $test_file"
 done
