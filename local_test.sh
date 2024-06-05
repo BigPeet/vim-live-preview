@@ -9,7 +9,7 @@ function print_vader_output() {
     return
   fi
   echo "Details:"
-  echo "$1" | sed -ne '/Starting Vader:/,$p'
+  echo "$1" | sed -e '1,/Starting Vader:/d'
 }
 
 VERBOSE=0
