@@ -23,6 +23,7 @@ jobs:
             git clone https://github.com/vim/vim.git
         - name: Checkout and Build Vim ${{ matrix.vim-tag }}
           run: |
+            cd vim/
             git checkout ${{ matrix.vim-tag }}
             cd src/
             PYTHON_BUILD_CONFIG="--enable-python3interp"
