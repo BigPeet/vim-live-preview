@@ -15,9 +15,10 @@ let s:default_options = {
       \ 'change_updatetime': v:true,
       \ 'update_interval': 250,
       \ 'preview_buffer_filetype': '',
-      \ 'preview_buffer_name': 'VimLivePreview',
+      \ 'preview_buffer_name': '[VimLivePreview]',
       \ 'input': 'range',
-      \ 'trigger_events': ["TextChanged", "TextChangedI", "TextChangedP",],
+      \ 'trigger_events': ['TextChanged', 'TextChangedI', 'TextChangedP',],
+      \ 'use_jobs': v:true,
       \ }
 
 " Getter functions for 'global' options
@@ -30,6 +31,18 @@ function! s:GetOption(name)
        \ get(g:, 'vlp_' . a:name, s:default_options[a:name]))
 endfunction
 
+
+function! s:EnsureBrackets(name)
+  let l:bracketed_name = a:name
+  if l:bracketed_name[0] != '['
+    let l:bracketed_name = '[' . l:bracketed_name
+  endif
+  if l:bracketed_name[-1:] != ']'
+    let l:bracketed_name = l:bracketed_name . ']'
+  endif
+  return l:bracketed_name
+endfunction
+
 " Print functions
 function! s:Print(msg)
   echomsg a:msg
@@ -37,9 +50,7 @@ endfunction
 
 
 function! s:PrintError(msg)
-  echohl ErrorMsg
-  echomsg "Error: " . a:msg
-  echohl None
+  echoerr "Error: " . a:msg
 endfunction
 
 
@@ -74,12 +85,12 @@ function! s:LeavePreviewMode()
 endfunction
 
 
-function! s:CreatePreviewBuffer()
-  exec "vertical new " . s:GetOption('preview_buffer_name')
+function! s:CreatePreviewBuffer(bufname)
+  exec "vertical new " . a:bufname
   let l:bufnr = bufnr()
 
   setlocal nobuflisted
-  setlocal bufhidden=delete
+  setlocal bufhidden=wipe " or delete?
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal autoread
@@ -117,7 +128,7 @@ function! s:GetParams()
   elseif l:input == 'buffer'
     let l:params = "bufnr('%')"
   elseif l:input == 'fname'
-    let l:params = "shellescape(expand('%:p'))"
+    let l:params = "expand('%:p')"
   elseif l:input == 'content'
     let l:params = "escape(join(getline(1, '$'), '\n'), '\"')"
   elseif l:input == 'none' || l:input == ''
@@ -138,7 +149,7 @@ function! s:ParameterizedCommand(cmd, args)
   elseif l:input == 'buffer' || l:input == 'fname'
     let l:cmd_suffix = a:args[0]
   elseif l:input == 'content'
-    let l:cmd_suffix = '"' . a:args[0] . '"'
+    let l:cmd_suffix = substitute(a:args[0], '\\"', '"', 'g')
   elseif l:input == 'none' || l:input == ''
     " do nothing
   else
@@ -150,7 +161,8 @@ endfunction
 
 function! s:FunctionWrite(...)
   if a:0 < 3 && a:0 >= 0
-    let l:quote = s:GetOption('input') == 'content' ? '"' : ''
+    let l:input = s:GetOption('input')
+    let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
     exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" . l:quote .
           \ join(a:000, ',') . l:quote . "))"
   else
@@ -167,10 +179,15 @@ function! s:SetupWriteFunction()
   exec l:write_callback
 
   " Continuous write
+  let l:events = s:GetOption('trigger_events')
   augroup preview_mode
     autocmd!
-    exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
-          \ l:write_callback . " | checktime"
+    if !empty(l:events)
+      exec "autocmd " . join(l:events, ",") . " <buffer> " .
+            \ l:write_callback . " | checktime"
+    else
+      call s:Print("No trigger events defined.")
+    endif
   augroup END
 endfunction
 
@@ -180,34 +197,50 @@ function! s:CloseCallback(channel) abort
   while ch_status(a:channel, {'part': 'out'}) == 'buffered'
     let l:lines += [ch_read(a:channel)]
   endwhile
-  unlet s:job
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
+endfunction
+
+
+function! s:InsertInputIntoShellCommand(cmd, input, value)
+  let l:pattern = '<' . a:input . '>'
+  if stridx(a:cmd, l:pattern) != -1
+    return substitute(a:cmd, l:pattern, a:value, 'g')
+  else
+    return a:cmd . " " . a:value
+  endif
 endfunction
 
 
 function! s:CommandWrite(...)
   " TODO: split external and internal commands into two functions
+  "       re-use commonalities, e.g. content handling
   if fullcommand(s:cmd) == '!'
     " external shell command
     let l:cmd = substitute(s:cmd, '^:\?!', '', '')
     let l:input = s:GetOption('input')
-    if l:input == 'buffer' || l:input == 'fname'
-      let l:cmd = l:cmd . " " . a:1
+    let l:value = ''
+    " TODO: do I need to shellescape input, e.g., if its an fname?
+    if l:input == 'content'
+      let l:value = substitute(a:1, '\\"', '"', 'g')
+    elseif l:input != 'none'
+      let l:value = l:input == 'range' ? a:1 . ',' . a:2 : a:1
+      let l:cmd = s:InsertInputIntoShellCommand(l:cmd, l:input, l:value)
     endif
 
-    if exists("*job_start") " TODO: neovim support: jobstart
+    " TODO: neovim support: jobstart
+    if exists("*job_start") && s:GetOption('use_jobs')
       let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
       " preview buffer will be written in callback
       let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})
       if l:input == 'content'
         let l:channel = job_getchannel(s:job)
-        call ch_sendraw(l:channel, substitute(a:1, '\\"', '"', 'g'))
+        call ch_sendraw(l:channel, l:value)
         call ch_close_in(l:channel)
       endif
       return
     else
       if l:input == 'content'
-        let l:lines = split(system(l:cmd, substitute(a:1, '\\"', '"', 'g')), "\n")
+        let l:lines = split(system(l:cmd, l:value), "\n")
       else
         let l:lines = split(system(l:cmd), "\n")
       endif
@@ -245,13 +278,26 @@ function! vlp#EnterPreviewMode(functor, ...)
     return
   endif
 
-  only " close all windows except the current one TODO: option
-  let s:focus_bufnr = bufnr()
-  let s:preview_bufnr = s:CreatePreviewBuffer()
+  let l:bufname = s:EnsureBrackets(s:GetOption('preview_buffer_name'))
+  if bufexists(l:bufname) " TODO: use bufloaded instead?
+    " TODO: option to reuse the buffer
+    call s:PrintError("Preview buffer already exists: " .
+          \ s:EnsureBrackets(s:GetOption('preview_buffer_name')))
+    return
+  endif
 
   if s:GetOption('change_updatetime')
     let s:updatetime_restore = &updatetime
     let &updatetime = s:GetOption('update_interval')
+  endif
+
+  only " close all windows except the current one TODO: option
+  let s:focus_bufnr = bufnr()
+  let s:preview_bufnr = s:CreatePreviewBuffer(l:bufname)
+  if s:preview_bufnr == -1
+    call s:PrintError("Preview buffer already exists: " .
+          \ s:EnsureBrackets(s:GetOption('preview_buffer_name')))
+    return
   endif
 
   " Setup leave

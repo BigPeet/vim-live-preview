@@ -1,0 +1,48 @@
+Include: setup.vader
+
+Execute (Input Test Helpers):
+  function! BufferTest(bufnum)
+    return [a:bufnum]
+  endfunction
+  command! -nargs=1 BufferTestCmd echo join(BufferTest(<f-args>), "\n")
+
+  function! InputTest(is_async, expected, ...)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    if a:is_async
+      sleep 200m " sleep since async jobs might need a moment
+    endif
+    AssertEqual a:expected,
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+  endfunction
+
+
+Given (Input Text):
+  "1. Line"
+  '2. Line'
+  3. Line
+
+# "buffer" Tests
+
+Execute (Input Buffer: FuncRef):
+  call InputTest(0, string(bufnr()), 'function("BufferTest")', {"input": "buffer"})
+
+Execute (Input Buffer: Function Name):
+  call InputTest(0, string(bufnr()), "'BufferTest'", {"input": "buffer"})
+
+Execute (Input Buffer: Vim Command):
+  call InputTest(0, string(bufnr()), "':BufferTestCmd'", {"input": "buffer"})
+
+Execute (Input Buffer: Shell Command Job):
+  call InputTest(1, string(bufnr()), "':!echo'", {"input": "buffer"})
+  VLPLeave
+  call InputTest(1, string(bufnr()), "':!echo <buffer>'", {"input": "buffer"})
+
+Execute (Input Buffer: Shell Command):
+  call InputTest(0, string(bufnr()), "':!echo'", {"input": "buffer", "use_jobs": v:false})
+  VLPLeave
+  call InputTest(0, string(bufnr()), "':!echo <buffer>'", {"input": "buffer", "use_jobs": v:false})
+
+Execute (Set Input Buffer Globally):
+  let g:vlp_input = "buffer"
+  call InputTest(0, string(bufnr()), 'function("BufferTest")')
+  unlet g:vlp_input

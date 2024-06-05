@@ -1,0 +1,17 @@
+Include: setup.vader
+
+Execute (Double Startup):
+  call OpenTestMode()
+  AssertThrows call OpenTestMode()
+
+Execute (Double Close):
+  call OpenTestMode()
+  VLPLeave
+  AssertThrows VLPLeave
+
+Execute (No parameter):
+  AssertThrows call vlp#EnterPreviewMode()
+
+Execute (Unknown function/command):
+  AssertThrows call vlp#EnterPreviewMode('NoSuchFunctionOrCommand')
+  AssertThrows call vlp#EnterPreviewMode(':NoSuchFunctionOrCommand')

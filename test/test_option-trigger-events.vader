@@ -1,0 +1,60 @@
+Include: setup.vader
+
+Execute (Trigger Events Test Helpers):
+  let g:expected_even = ['"1. Foo"', "'2. bar'", "3. bar Foo"]
+  let g:expected_odd = ['"1. Foo"', "'2. boo'", "3. boo Foo"]
+  let g:dev_trigger_events = vlp#DefaultOptions()['trigger_events']
+  function! TriggerTest(trigger_events, expect_change,...)
+    call call(function('OpenTestMode'), a:000)
+    AssertEqual g:expected_even, getbufline(bufnr(g:def_preview_bufname), 1, "$")
+    let loop_idx = 0
+    while loop_idx < len(a:trigger_events)
+      " perform some modification
+      if loop_idx % 2 == 0
+        %s/foo/boo/gI
+      else
+        %s/boo/foo/gI
+      endif
+      " manually trigger event
+      exec "doautocmd " . a:trigger_events[loop_idx]
+      " compare
+      if a:expect_change
+        let l:expected = loop_idx % 2 == 0 ? g:expected_odd : g:expected_even
+        AssertEqual l:expected, getbufline(bufnr(g:def_preview_bufname), 1, "$")
+      else
+        AssertEqual g:expected_even, getbufline(bufnr(g:def_preview_bufname), 1, "$")
+      endif
+      let loop_idx = loop_idx + 1
+    endwhile
+  endfunction
+
+
+Given (Foo Text):
+  "1. Foo"
+  '2. foo'
+  3. foo Foo
+
+Execute (Trigger Events: Default):
+  call TriggerTest(g:dev_trigger_events, v:true)
+
+Execute (Trigger Events: No triggers):
+  call TriggerTest(g:dev_trigger_events, v:false, {'trigger_events': []})
+  AssertEqual trim(execute(":1messages")), "No trigger events defined."
+
+Execute (Trigger Events: Set trigger events):
+  let custom_trigger_events = ['BufWritePost', 'CursorHold']
+  call TriggerTest(custom_trigger_events, v:true, {'trigger_events': custom_trigger_events})
+
+Execute (Trigger Events: Set invalid trigger events):
+  let custom_trigger_events = ['DoesNotExist']
+  AssertThrows call vlp#EnterPreviewMode('OpenTestMode', {'trigger_events': custom_trigger_events})
+
+Execute (Trigger Events: Dont trigger events):
+  let custom_trigger_events = ['BufWritePost', 'CursorHold']
+  let set_trigger_events = ['TextChanged', 'TextChangedI']
+  call TriggerTest(custom_trigger_events, v:false, {'trigger_events': set_trigger_events})
+
+Execute (Trigger Events: Set trigger events globally):
+  let g:vlp_trigger_events = ['BufWritePost', 'CursorHold']
+  call TriggerTest(g:vlp_trigger_events, v:true)
+  unlet g:vlp_trigger_events

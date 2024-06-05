@@ -1,0 +1,59 @@
+Include: setup.vader
+
+Execute (Define Basic Test Helpers):
+  function! DefaultStartupTest(is_async, ...)
+    Assert ! bufexists(g:def_preview_bufname)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    Assert bufexists(g:def_preview_bufname)
+    AssertNotEqual -1, bufwinnr(g:def_preview_bufname)
+
+    if a:is_async
+      sleep 100m " sleep since async jobs might need a moment
+    endif
+    AssertEqual "\"This is bar.\"",
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+    %s/This/foo/g
+    doautocmd TextChanged
+    if a:is_async
+      sleep 100m " sleep since async jobs might need a moment
+    endif
+    AssertEqual "\"bar is bar.\"",
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+  endfunction
+  function! AssertLeftPreviewModeAndWipedBuffer()
+    AssertEqual trim(execute(":1messages")), "Left preview mode."
+    Assert ! bufexists(g:def_preview_bufname)
+    Assert ! exists(':VLPLeave')
+  endfunction
+
+Given (Foo Text):
+  "This is foo."
+
+Execute (Default with FuncRef):
+  call DefaultStartupTest(0, "function('VLPTestFunctionRange')")
+
+Execute (Default with Function Name):
+  call DefaultStartupTest(0, "'VLPTestFunctionRange'")
+
+Execute (Default with Vim Command):
+  call DefaultStartupTest(0, "':VLPTestFunctionRangeCmd'")
+
+Execute (Default with Shell Command Job):
+  call DefaultStartupTest(1, "':!sed \"s/foo/bar/g\"'",
+    \ "{\"input\": \"content\"}")
+
+Execute (Default with Shell Command):
+  call DefaultStartupTest(0, "':!sed \"s/foo/bar/g\"'",
+    \ "{\"input\": \"content\", \"use_jobs\": \"v:false\"}")
+
+Execute (Close Preview Mode):
+  Assert ! bufexists(g:def_preview_bufname)
+  call OpenTestMode()
+  Assert bufexists(g:def_preview_bufname)
+  VLPLeave
+  call AssertLeftPreviewModeAndWipedBuffer()
+
+Execute (Close Preview Window):
+  call OpenTestMode()
+  exec bufwinnr(g:def_preview_bufname) . "wincmd c"
+  call AssertLeftPreviewModeAndWipedBuffer()
