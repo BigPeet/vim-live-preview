@@ -1,11 +1,11 @@
 Include: setup.vader
 
 Execute (Double Startup):
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
-  AssertThrows call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  call OpenTestMode()
+  AssertThrows call OpenTestMode()
 
 Execute (Double Close):
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  call OpenTestMode()
   VLPLeave
   AssertThrows VLPLeave
 

@@ -15,7 +15,7 @@ let s:default_options = {
       \ 'change_updatetime': v:true,
       \ 'update_interval': 250,
       \ 'preview_buffer_filetype': '',
-      \ 'preview_buffer_name': 'VimLivePreview',
+      \ 'preview_buffer_name': '[VimLivePreview]',
       \ 'input': 'range',
       \ 'trigger_events': ['TextChanged', 'TextChangedI', 'TextChangedP',],
       \ 'use_jobs': v:true,
@@ -29,6 +29,18 @@ let s:default_options = {
 function! s:GetOption(name)
   return get(s:options, a:name,
        \ get(g:, 'vlp_' . a:name, s:default_options[a:name]))
+endfunction
+
+
+function! s:EnsureBrackets(name)
+  let l:bracketed_name = a:name
+  if l:bracketed_name[0] != '['
+    let l:bracketed_name = '[' . l:bracketed_name
+  endif
+  if l:bracketed_name[-1:] != ']'
+    let l:bracketed_name = l:bracketed_name . ']'
+  endif
+  return l:bracketed_name
 endfunction
 
 " Print functions
@@ -73,8 +85,8 @@ function! s:LeavePreviewMode()
 endfunction
 
 
-function! s:CreatePreviewBuffer()
-  exec "vertical new " . s:GetOption('preview_buffer_name')
+function! s:CreatePreviewBuffer(bufname)
+  exec "vertical new " . a:bufname
   let l:bufnr = bufnr()
 
   setlocal nobuflisted
@@ -184,14 +196,28 @@ function! s:CloseCallback(channel) abort
 endfunction
 
 
+function! s:InsertInputIntoShellCommand(cmd, input, value)
+  let l:pattern = '<' . a:input . '>'
+  if stridx(a:cmd, l:pattern) != -1
+    return substitute(a:cmd, l:pattern, a:value, 'g')
+  else
+    return a:cmd . " " . a:value
+  endif
+endfunction
+
+
 function! s:CommandWrite(...)
   " TODO: split external and internal commands into two functions
   if fullcommand(s:cmd) == '!'
     " external shell command
     let l:cmd = substitute(s:cmd, '^:\?!', '', '')
     let l:input = s:GetOption('input')
-    if l:input == 'buffer' || l:input == 'fname'
-      let l:cmd = l:cmd . " " . a:1
+    let l:value = ''
+    if l:input == 'content'
+      let l:value = substitute(a:1, '\\"', '"', 'g')
+    elseif l:input != 'none'
+      let l:value = l:input == 'range' ? a:1 . ',' . a:2 : a:1
+      let l:cmd = s:InsertInputIntoShellCommand(l:cmd, l:input, l:value)
     endif
 
     " TODO: neovim support: jobstart
@@ -201,13 +227,13 @@ function! s:CommandWrite(...)
       let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})
       if l:input == 'content'
         let l:channel = job_getchannel(s:job)
-        call ch_sendraw(l:channel, substitute(a:1, '\\"', '"', 'g'))
+        call ch_sendraw(l:channel, l:value)
         call ch_close_in(l:channel)
       endif
       return
     else
       if l:input == 'content'
-        let l:lines = split(system(l:cmd, substitute(a:1, '\\"', '"', 'g')), "\n")
+        let l:lines = split(system(l:cmd, l:value), "\n")
       else
         let l:lines = split(system(l:cmd), "\n")
       endif
@@ -245,13 +271,26 @@ function! vlp#EnterPreviewMode(functor, ...)
     return
   endif
 
-  only " close all windows except the current one TODO: option
-  let s:focus_bufnr = bufnr()
-  let s:preview_bufnr = s:CreatePreviewBuffer()
+  let l:bufname = s:EnsureBrackets(s:GetOption('preview_buffer_name'))
+  if bufexists(l:bufname) " TODO: use bufloaded instead?
+    " TODO: option to reuse the buffer
+    call s:PrintError("Preview buffer already exists: " .
+          \ s:EnsureBrackets(s:GetOption('preview_buffer_name')))
+    return
+  endif
 
   if s:GetOption('change_updatetime')
     let s:updatetime_restore = &updatetime
     let &updatetime = s:GetOption('update_interval')
+  endif
+
+  only " close all windows except the current one TODO: option
+  let s:focus_bufnr = bufnr()
+  let s:preview_bufnr = s:CreatePreviewBuffer(l:bufname)
+  if s:preview_bufnr == -1
+    call s:PrintError("Preview buffer already exists: " .
+          \ s:EnsureBrackets(s:GetOption('preview_buffer_name')))
+    return
   endif
 
   " Setup leave

@@ -12,8 +12,8 @@ endfunction
 command! -range=% VLPTestFunctionCmd
       \ echo join(VLPTestFunction(<line1>, <line2>), "\n")
 
-command! -nargs=1 -complete=function VLP
+command! -nargs=1 -complete=function VLPFunc
       \ call vlp#EnterPreviewMode(function(<f-args>))
 command! -nargs=1 -complete=command VLPCmd
       \ call vlp#EnterPreviewMode(<f-args>)
-command! -nargs=1 VLPAnything call vlp#EnterPreviewMode(<args>)
+command! -nargs=1 VLP call vlp#EnterPreviewMode(<args>)

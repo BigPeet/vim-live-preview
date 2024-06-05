@@ -1,0 +1,9 @@
+Include: setup.vader
+
+Execute (Default Filetype):
+  call OpenTestMode()
+  AssertEqual g:def_preview_ft, getbufvar(g:def_preview_bufname, "&ft")
+
+Execute (Set Filetype):
+  call OpenTestMode({'preview_buffer_filetype': 'cpp'})
+  AssertEqual 'cpp', getbufvar(g:def_preview_bufname, "&ft")

@@ -1,13 +1,22 @@
 # Define various functions or other symbols used in tests.
 
 Execute (Define functions):
+  let g:def_preview_bufname = vlp#DefaultOptions()['preview_buffer_name']
+  let g:def_preview_ft = vlp#DefaultOptions()['preview_buffer_filetype']
+  let g:def_update_interval = vlp#DefaultOptions()['update_interval']
   function! VLPTestFunctionRange(start, end)
     let l:lines = getline(a:start, a:end)
     let l:lines = map(l:lines, 'substitute(v:val, "foo", "bar", "g")')
     return l:lines
   endfunction
+
   command! -range=% VLPTestFunctionRangeCmd
     \ echo join(VLPTestFunctionRange(<line1>, <line2>), "\n")
+
+  function! OpenTestMode(...)
+    call call(function('vlp#EnterPreviewMode'),
+      \ [function('VLPTestFunctionRange')] + a:000)
+  endfunction!
 
 After:
   if exists(":VLPLeave")

@@ -1,8 +1,6 @@
 Include: setup.vader
 
-
-Execute (Define Test Helpers):
-  let g:def_preview_bufname = vlp#DefaultOptions()['preview_buffer_name']
+Execute (Define Basic Test Helpers):
   function! DefaultStartupTest(is_async, ...)
     Assert ! bufexists(g:def_preview_bufname)
     exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
@@ -15,28 +13,23 @@ Execute (Define Test Helpers):
     AssertEqual "\"This is bar.\"",
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
     %s/This/foo/g
-    doautocmd TextChanged
+    doautocmd TextChanged,BufWritePost
     if a:is_async
       sleep 100m " sleep since async jobs might need a moment
     endif
     AssertEqual "\"bar is bar.\"",
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
   endfunction
-
   function! AssertLeftPreviewModeAndWipedBuffer()
     Assert (execute(":-1messages") =~# "Left preview mode.")
     Assert ! bufexists(g:def_preview_bufname)
     Assert ! exists(':VLPLeave')
   endfunction
 
-
 Given (Foo Text):
   "This is foo."
 
 " TODO Check (in other files):
-" - FT option
-" - Buffername option
-" - updatetime options
 " - trigger event options
 " - For every F (of Function, FuncRef, Cmd, Shell)
 "   - test every "input" type
@@ -60,12 +53,12 @@ Execute (Default with Shell Command):
 
 Execute (Close Preview Mode):
   Assert ! bufexists(g:def_preview_bufname)
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  call OpenTestMode()
   Assert bufexists(g:def_preview_bufname)
   VLPLeave
   call AssertLeftPreviewModeAndWipedBuffer()
 
 Execute (Close Preview Window):
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  call OpenTestMode()
   exec bufwinnr(g:def_preview_bufname) . "wincmd c"
   call AssertLeftPreviewModeAndWipedBuffer()

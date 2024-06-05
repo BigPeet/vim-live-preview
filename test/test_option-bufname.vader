@@ -1,0 +1,27 @@
+Include: setup.vader
+
+Execute (Default Buffername):
+  Assert ! bufexists(g:def_preview_bufname)
+  call OpenTestMode()
+  Assert bufexists(g:def_preview_bufname)
+
+Execute (Set Buffername with Brackets):
+  let my_buffer_name = "[SomeTestBuffer]"
+  Assert ! bufexists(my_buffer_name)
+  call OpenTestMode({'preview_buffer_name': my_buffer_name})
+  Assert bufexists(my_buffer_name)
+
+Execute (Set Buffername without Brackets):
+  let my_buffer_name = "SomeTestBuffer"
+  let br_my_buffer_name = "[" . my_buffer_name . "]"
+  Assert ! bufexists(my_buffer_name)
+  Assert ! bufexists(br_my_buffer_name)
+  call OpenTestMode({'preview_buffer_name': my_buffer_name})
+  Assert bufexists(br_my_buffer_name)
+  Assert ! bufexists(my_buffer_name)
+
+Execute (Duplicate Buffername):
+  call bufadd(g:def_preview_bufname)
+  call bufload(g:def_preview_bufname)
+  AssertThrows call OpenTestMode()
+  exec bufnr(g:def_preview_bufname) . "bwipeout"

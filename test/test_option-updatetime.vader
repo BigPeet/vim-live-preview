@@ -1,0 +1,18 @@
+Include: setup.vader
+
+Execute (Default Updates):
+  call OpenTestMode()
+  AssertEqual g:def_update_interval, &updatetime
+
+Execute (No Updates):
+  let old_updatetime = &updatetime
+  call OpenTestMode({"change_updatetime": v:false})
+  AssertEqual old_updatetime, &updatetime
+
+Execute (Set Update Interval):
+  let my_interval = 1000
+  call OpenTestMode({"update_interval": my_interval})
+  AssertEqual my_interval, &updatetime
+
+Execute (Set Negative Update Interval):
+  AssertThrows call OpenTestMode({"update_interval": -1})
