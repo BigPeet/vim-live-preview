@@ -7,6 +7,8 @@ SCRIPT_NAME=$0
 SCRIPT_DIR=$(dirname $SCRIPT_NAME)
 PLUGIN_DIR=$(dirname $SCRIPT_DIR)
 
+echo "Running Vader tests for plugin: $PLUGIN_DIR"
+
 function print_vader_output() {
   if [ $VERBOSE -eq 0 ]; then
     return
@@ -33,6 +35,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+echo "Verbose: $VERBOSE"
 
 FAILED=()
 SUCCEEDED=()
