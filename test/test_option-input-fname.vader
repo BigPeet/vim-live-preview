@@ -41,3 +41,7 @@ Execute (Input FName: Shell Command):
   call InputTest(0, expand("%:p"), "':!echo'", {"input": "fname", "use_jobs": v:false})
   VLPLeave
   call InputTest(0, expand("%:p"), "':!echo <fname>'", {"input": "fname", "use_jobs": v:false})
+
+Execute (Set Input FName Globally):
+  let g:vlp_input = "fname"
+  call InputTest(0, expand("%:p"), 'function("FNameTest")')

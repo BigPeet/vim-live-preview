@@ -53,3 +53,7 @@ Execute (Trigger Events: Dont trigger events):
   let custom_trigger_events = ['BufWritePost', 'CursorHold']
   let set_trigger_events = ['TextChanged', 'TextChangedI']
   call TriggerTest(custom_trigger_events, v:false, {'trigger_events': set_trigger_events})
+
+Execute (Trigger Events: Set trigger events globally):
+  let g:vlp_trigger_events = ['BufWritePost', 'CursorHold']
+  call TriggerTest(g:vlp_trigger_events, v:true)

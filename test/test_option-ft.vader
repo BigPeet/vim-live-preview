@@ -7,3 +7,8 @@ Execute (Default Filetype):
 Execute (Set Filetype):
   call OpenTestMode({'preview_buffer_filetype': 'cpp'})
   AssertEqual 'cpp', getbufvar(g:def_preview_bufname, "&ft")
+
+Execute (Set Filetype Globally):
+  let g:vlp_preview_buffer_filetype = "cpp"
+  call OpenTestMode()
+  AssertEqual 'cpp', getbufvar(g:def_preview_bufname, "&ft")

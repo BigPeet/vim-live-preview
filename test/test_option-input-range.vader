@@ -41,3 +41,8 @@ Execute (Input Range: Shell Command):
   call InputTest(0, '1,3', "':!echo'", {"input": "range", "use_jobs": v:false})
   VLPLeave
   call InputTest(0, '1,3', "':!echo <range>'", {"input": "range", "use_jobs": v:false})
+
+Execute (Set Input Range Globally):
+  let g:vlp_input = "range"
+  call InputTest(0, '1,3', 'function("RangeTest")')
+

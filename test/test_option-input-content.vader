@@ -37,3 +37,7 @@ Execute (Input Content: Shell Command Job):
 
 Execute (Input Content: Shell Command):
   call InputTest(0, getline(1, "$"), "':!cat'", {"input": "content", "use_jobs": v:false})
+
+Execute (Set Input Content Globally):
+  let g:vlp_input = "content"
+  call InputTest(0, getline(1, "$"), 'function("ContentTest")')

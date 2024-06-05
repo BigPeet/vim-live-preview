@@ -41,3 +41,7 @@ Execute (Input Buffer: Shell Command):
   call InputTest(0, string(bufnr()), "':!echo'", {"input": "buffer", "use_jobs": v:false})
   VLPLeave
   call InputTest(0, string(bufnr()), "':!echo <buffer>'", {"input": "buffer", "use_jobs": v:false})
+
+Execute (Set Input Buffer Globally):
+  let g:vlp_input = "buffer"
+  call InputTest(0, string(bufnr()), 'function("BufferTest")')
