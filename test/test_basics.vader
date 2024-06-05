@@ -13,7 +13,7 @@ Execute (Define Basic Test Helpers):
     AssertEqual "\"This is bar.\"",
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
     %s/This/foo/g
-    doautocmd TextChanged,BufWritePost
+    doautocmd TextChanged
     if a:is_async
       sleep 100m " sleep since async jobs might need a moment
     endif
@@ -31,8 +31,6 @@ Given (Foo Text):
 
 " TODO Check (in other files):
 " - trigger event options
-" - For every F (of Function, FuncRef, Cmd, Shell)
-"   - test every "input" type
 
 Execute (Default with FuncRef):
   call DefaultStartupTest(0, "function('VLPTestFunctionRange')")

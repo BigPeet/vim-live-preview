@@ -1,0 +1,39 @@
+Include: setup.vader
+
+Execute (Input Test Helpers):
+  function! ContentTest(content)
+    return split(a:content, "\n")
+  endfunction
+  command! -nargs=1 ContentTestCmd echo join(ContentTest(<f-args>), "\n")
+
+  function! InputTest(is_async, expected, ...)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    if a:is_async
+      sleep 200m " sleep since async jobs might need a moment
+    endif
+    AssertEqual a:expected,
+      \ getbufline(bufnr(g:def_preview_bufname), 1, "$")
+  endfunction
+
+
+Given (Input Text):
+  "1. Line"
+  '2. Line'
+  3. Line
+
+# "content" Tests
+
+Execute (Input Content: FuncRef):
+  call InputTest(0, getline(1, "$"), 'function("ContentTest")', {"input": "content"})
+
+Execute (Input Content: Function Name):
+  call InputTest(0, getline(1, "$"), "'ContentTest'", {"input": "content"})
+
+Execute (Input Content: Vim Command):
+  call InputTest(0, getline(1, "$"), "':ContentTestCmd'", {"input": "content"})
+
+Execute (Input Content: Shell Command Job):
+  call InputTest(1, getline(1, "$"), "':!cat'", {"input": "content"})
+
+Execute (Input Content: Shell Command):
+  call InputTest(0, getline(1, "$"), "':!cat'", {"input": "content", "use_jobs": v:false})

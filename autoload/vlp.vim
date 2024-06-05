@@ -128,7 +128,7 @@ function! s:GetParams()
   elseif l:input == 'buffer'
     let l:params = "bufnr('%')"
   elseif l:input == 'fname'
-    let l:params = "shellescape(expand('%:p'))"
+    let l:params = "expand('%:p')"
   elseif l:input == 'content'
     let l:params = "escape(join(getline(1, '$'), '\n'), '\"')"
   elseif l:input == 'none' || l:input == ''
@@ -149,7 +149,7 @@ function! s:ParameterizedCommand(cmd, args)
   elseif l:input == 'buffer' || l:input == 'fname'
     let l:cmd_suffix = a:args[0]
   elseif l:input == 'content'
-    let l:cmd_suffix = '"' . a:args[0] . '"'
+    let l:cmd_suffix = substitute(a:args[0], '\\"', '"', 'g')
   elseif l:input == 'none' || l:input == ''
     " do nothing
   else
@@ -161,7 +161,8 @@ endfunction
 
 function! s:FunctionWrite(...)
   if a:0 < 3 && a:0 >= 0
-    let l:quote = s:GetOption('input') == 'content' ? '"' : ''
+    let l:input = s:GetOption('input')
+    let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
     exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" . l:quote .
           \ join(a:000, ',') . l:quote . "))"
   else
@@ -208,11 +209,13 @@ endfunction
 
 function! s:CommandWrite(...)
   " TODO: split external and internal commands into two functions
+  "       re-use commonalities, e.g. content handling
   if fullcommand(s:cmd) == '!'
     " external shell command
     let l:cmd = substitute(s:cmd, '^:\?!', '', '')
     let l:input = s:GetOption('input')
     let l:value = ''
+    " TODO: do I need to shellescape input, e.g., if its an fname?
     if l:input == 'content'
       let l:value = substitute(a:1, '\\"', '"', 'g')
     elseif l:input != 'none'

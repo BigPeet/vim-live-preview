@@ -1,0 +1,43 @@
+Include: setup.vader
+
+Execute (Input Test Helpers):
+  function! FNameTest(fname)
+    return [a:fname]
+  endfunction
+  command! -nargs=1 FNameTestCmd echo join(FNameTest(<f-args>), "\n")
+
+  function! InputTest(is_async, expected, ...)
+    exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
+    if a:is_async
+      sleep 200m " sleep since async jobs might need a moment
+    endif
+    AssertEqual a:expected,
+      \ getbufoneline(bufnr(g:def_preview_bufname), 1)
+  endfunction
+
+
+Given (Input Text):
+  "1. Line"
+  '2. Line'
+  3. Line
+
+# "fname" Tests
+
+Execute (Input FName: FuncRef):
+  call InputTest(0, expand("%:p"), 'function("FNameTest")', {"input": "fname"})
+
+Execute (Input FName: Function Name):
+  call InputTest(0, expand("%:p"), "'FNameTest'", {"input": "fname"})
+
+Execute (Input FName: Vim Command):
+  call InputTest(0, expand("%:p"), "':FNameTestCmd'", {"input": "fname"})
+
+Execute (Input FName: Shell Command Job):
+  call InputTest(1, expand("%:p"), "':!echo'", {"input": "fname"})
+  VLPLeave
+  call InputTest(1, expand("%:p"), "':!echo <fname>'", {"input": "fname"})
+
+Execute (Input FName: Shell Command):
+  call InputTest(0, expand("%:p"), "':!echo'", {"input": "fname", "use_jobs": v:false})
+  VLPLeave
+  call InputTest(0, expand("%:p"), "':!echo <fname>'", {"input": "fname", "use_jobs": v:false})
