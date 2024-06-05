@@ -38,11 +38,10 @@ jobs:
               --without-x
             make -j$(nproc)
             sudo make install
-        - name: Verify version
-          run: |
             vim --version
         - name: Run Vader Tests
           run: |
-            echo $(pwd)
             git clone https://github.com/junegunn/vader.vim.git
-            vim -Nu test/vimrc -c 'Vader! test/test_*.vader' > /dev/null
+            echo "rtp+=$(pwd)" > $HOME/.vimrc
+            echo "rtp+=$(pwd)/vader.vim" >> $HOME/.vimrc
+            ./test/run_vader_tests.sh -v

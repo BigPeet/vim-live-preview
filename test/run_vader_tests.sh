@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This script expects that vader plugin is installed and
+# vim config is setup up approriately to run the tests.
+
 SCRIPT_NAME=$0
 SCRIPT_DIR=$(dirname $SCRIPT_NAME)
 PLUGIN_DIR=$(dirname $SCRIPT_DIR)
