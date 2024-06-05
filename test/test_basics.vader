@@ -21,16 +21,13 @@ Execute (Define Basic Test Helpers):
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
   endfunction
   function! AssertLeftPreviewModeAndWipedBuffer()
-    Assert (execute(":-1messages") =~# "Left preview mode.")
+    AssertEqual trim(execute(":1messages")), "Left preview mode."
     Assert ! bufexists(g:def_preview_bufname)
     Assert ! exists(':VLPLeave')
   endfunction
 
 Given (Foo Text):
   "This is foo."
-
-" TODO Check (in other files):
-" - trigger event options
 
 Execute (Default with FuncRef):
   call DefaultStartupTest(0, "function('VLPTestFunctionRange')")

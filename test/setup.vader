@@ -6,7 +6,7 @@ Execute (Define functions):
   let g:def_update_interval = vlp#DefaultOptions()['update_interval']
   function! VLPTestFunctionRange(start, end)
     let l:lines = getline(a:start, a:end)
-    let l:lines = map(l:lines, 'substitute(v:val, "foo", "bar", "g")')
+    let l:lines = map(l:lines, 'substitute(v:val, "\\Cfoo", "bar", "g")')
     return l:lines
   endfunction
 

@@ -179,10 +179,15 @@ function! s:SetupWriteFunction()
   exec l:write_callback
 
   " Continuous write
+  let l:events = s:GetOption('trigger_events')
   augroup preview_mode
     autocmd!
-    exec "autocmd " . join(s:GetOption('trigger_events'), ",") . " <buffer> " .
-          \ l:write_callback . " | checktime"
+    if !empty(l:events)
+      exec "autocmd " . join(l:events, ",") . " <buffer> " .
+            \ l:write_callback . " | checktime"
+    else
+      call s:Print("No trigger events defined.")
+    endif
   augroup END
 endfunction
 

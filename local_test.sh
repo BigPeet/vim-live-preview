@@ -16,15 +16,17 @@ fi
 start=$(date +%s)
 
 for test_file in ${TEST}; do
-  echo "Running test: $test_file"
+  echo -en "Running test: $test_file ...\t"
   vader_out=$(vim -N -c "Vader! ${PLUGIN_DIR}/${test_file}" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
-    echo "Failed test: $test_file"
+    #echo "Failed test: $test_file"
+    echo "FAILED"
     FAILED+=($test_file)
     echo "Details:"
     echo "$vader_out"
   else
-    echo "Succeeded test: $test_file"
+    #echo "Succeeded test: $test_file"
+    echo "SUCCEEDED"
     SUCCEEDED+=($test_file)
   fi
 done
