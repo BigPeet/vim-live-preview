@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        vim-tag: ["v9.1.0"]
+        vim-tag: ["v9.1.0445"]
     steps:
         - uses: actions/checkout@v2
           with:
