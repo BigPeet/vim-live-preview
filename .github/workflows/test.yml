@@ -26,7 +26,17 @@ jobs:
             cd vim/
             git checkout ${{ matrix.vim-tag }}
             cd src/
-            PYTHON_BUILD_CONFIG="--enable-python3interp" make reconfig -j$(nproc)
+            ./configure \
+              --disable-gpm \
+              --disable-nls \
+              --disable-sysmouse \
+              --enable-gui=no \
+              --enable-multibyte \
+              --enable-python3interp \
+              --with-features=huge \
+              --with-tlib=ncurses \
+              --without-x
+            make -j$(nproc)
             sudo make install
         - name: Verify version
           run: |
@@ -37,4 +47,4 @@ jobs:
             vim -Nu <(cat << VIMRC
             set rtp+=vader.vim
             set rtp+=.
-            VIMRC) -c 'silent Vader! test/test_*.vader' > /dev/null
+            VIMRC) -c 'Vader! test/test_*.vader' > /dev/null
