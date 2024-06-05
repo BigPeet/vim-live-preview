@@ -43,8 +43,6 @@ jobs:
             vim --version
         - name: Run Vader Tests
           run: |
+            echo $(pwd)
             git clone https://github.com/junegunn/vader.vim.git
-            vim -Nu <(cat << VIMRC
-            set rtp+=vader.vim
-            set rtp+=.
-            VIMRC) -c 'Vader! test/test_*.vader' > /dev/null
+            vim -Nu test/vimrc -c 'Vader! test/test_*.vader' > /dev/null
