@@ -38,9 +38,7 @@ endfunction
 
 
 function! s:PrintError(msg)
-  echohl ErrorMsg
-  echomsg "Error: " . a:msg
-  echohl None
+  echoerr "Error: " . a:msg
 endfunction
 
 

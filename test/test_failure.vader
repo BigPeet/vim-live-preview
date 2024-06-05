@@ -1,0 +1,17 @@
+Include: setup.vader
+
+Execute (Double Startup):
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  AssertThrows call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+
+Execute (Double Close):
+  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
+  VLPLeave
+  AssertThrows VLPLeave
+
+Execute (No parameter):
+  AssertThrows call vlp#EnterPreviewMode()
+
+Execute (Unknown function/command):
+  AssertThrows call vlp#EnterPreviewMode('NoSuchFunctionOrCommand')
+  AssertThrows call vlp#EnterPreviewMode(':NoSuchFunctionOrCommand')

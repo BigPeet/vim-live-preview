@@ -7,18 +7,19 @@ Execute (Define Test Helpers):
     Assert ! bufexists(g:def_preview_bufname)
     exec "call vlp#EnterPreviewMode(" . join(a:000, ',') . ")"
     Assert bufexists(g:def_preview_bufname)
-    Assert (execute(":-1messages") !~ ".*Error:")
+    AssertNotEqual -1, bufwinnr(g:def_preview_bufname)
+
     if a:is_async
       sleep 100m " sleep since async jobs might need a moment
     endif
-    AssertEqual "This is bar.",
+    AssertEqual "\"This is bar.\"",
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
     %s/This/foo/g
     doautocmd TextChanged
     if a:is_async
       sleep 100m " sleep since async jobs might need a moment
     endif
-    AssertEqual "bar is bar.",
+    AssertEqual "\"bar is bar.\"",
       \ getbufoneline(bufnr(g:def_preview_bufname), 1)
   endfunction
 
@@ -30,7 +31,7 @@ Execute (Define Test Helpers):
 
 
 Given (Foo Text):
-  This is foo.
+  "This is foo."
 
 " TODO Check (in other files):
 " - FT option
@@ -57,23 +58,12 @@ Execute (Default with Shell Command):
   call DefaultStartupTest(0, "':!sed \"s/foo/bar/g\"'",
     \ "{\"input\": \"content\", \"use_jobs\": \"v:false\"}")
 
-Execute (Double Startup):
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
-  Assert (execute(":-1messages") !~ ".*Error:")
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
-  Assert (execute(":-1messages") =~# ".*Error:")
-
 Execute (Close Preview Mode):
   Assert ! bufexists(g:def_preview_bufname)
   call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
   Assert bufexists(g:def_preview_bufname)
   VLPLeave
   call AssertLeftPreviewModeAndWipedBuffer()
-
-Execute (Double Close):
-  call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
-  VLPLeave
-  AssertThrows VLPLeave
 
 Execute (Close Preview Window):
   call vlp#EnterPreviewMode(function('VLPTestFunctionRange'))
