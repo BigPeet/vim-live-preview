@@ -4,6 +4,33 @@ SCRIPT_NAME=$0
 SCRIPT_DIR=$(dirname $SCRIPT_NAME)
 PLUGIN_DIR=$SCRIPT_DIR
 
+function print_vader_output() {
+  if [ $VERBOSE -eq 0 ]; then
+    return
+  fi
+  echo "Details:"
+  echo "$1" | sed -ne '/Starting Vader:/,$p'
+}
+
+VERBOSE=0
+
+# option parsing
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -v | --verbose)
+      VERBOSE=1
+      shift
+      ;;
+    -* | --*)
+      echo "Invalid option: $1"
+      exit 1
+      ;;
+    *) # positional argument
+      break
+      ;;
+  esac
+done
+
 FAILED=()
 SUCCEEDED=()
 
@@ -19,15 +46,13 @@ for test_file in ${TEST}; do
   echo -en "Running test: $test_file ...\t"
   vader_out=$(vim -N -c "Vader! ${PLUGIN_DIR}/${test_file}" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
-    #echo "Failed test: $test_file"
-    echo "FAILED"
     FAILED+=($test_file)
-    echo "Details:"
-    echo "$vader_out"
+    echo "FAILED"
+    print_vader_output "$vader_out"
   else
-    #echo "Succeeded test: $test_file"
-    echo "SUCCEEDED"
     SUCCEEDED+=($test_file)
+    echo "SUCCEEDED"
+    print_vader_output "$vader_out"
   fi
 done
 
