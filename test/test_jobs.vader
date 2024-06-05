@@ -1,0 +1,19 @@
+Include: setup.vader
+
+Execute (Start 2nd job):
+  call vlp#EnterPreviewMode('!:sleep 1s ; echo "<range>"', {'input': 'range', 'use_jobs': v:true})
+  " this will start an initial job which sleeps for 1 second
+  sleep 1000m
+  AssertEqual "1,1", getbufoneline(g:def_preview_bufname, 1)
+
+  " Now trigger an observable change
+  call append(line("."), "New line added")
+  doautocmd TextChanged
+  sleep 10m
+  " before that jobs finishes, but with a small delay,
+  " send a trigger event which would start a new one
+  call append(line("."), "New line added")
+  doautocmd TextChanged
+
+  sleep 1000m
+  AssertEqual "1,3", getbufoneline(g:def_preview_bufname, 1)

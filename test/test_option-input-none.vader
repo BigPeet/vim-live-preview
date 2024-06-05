@@ -36,3 +36,4 @@ Execute (Input None: Shell Command):
 Execute (Set Input None Globally):
   let g:vlp_input = ""
   call InputTest(0, g:dummy_text, 'function("NoneTest")')
+  unlet g:vlp_input

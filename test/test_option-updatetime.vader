@@ -21,9 +21,11 @@ Execute (Set Update Interval Globally):
   let g:vlp_update_interval = 1000
   call OpenTestMode()
   AssertEqual g:vlp_update_interval, &updatetime
+  unlet g:vlp_update_interval
 
 Execute (Set No Updates Globally):
   let old_updatetime = &updatetime
   let g:vlp_change_updatetime = v:false
   call OpenTestMode()
   AssertEqual old_updatetime, &updatetime
+  unlet g:vlp_change_updatetime

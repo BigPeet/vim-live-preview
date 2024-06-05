@@ -197,7 +197,6 @@ function! s:CloseCallback(channel) abort
   while ch_status(a:channel, {'part': 'out'}) == 'buffered'
     let l:lines += [ch_read(a:channel)]
   endwhile
-  unlet s:job
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
 endfunction
 

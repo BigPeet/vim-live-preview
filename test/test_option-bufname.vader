@@ -31,3 +31,4 @@ Execute (Set Buffername Globally):
   Assert ! bufexists(g:vlp_preview_buffer_name)
   call OpenTestMode()
   Assert bufexists(g:vlp_preview_buffer_name)
+  unlet g:vlp_preview_buffer_name

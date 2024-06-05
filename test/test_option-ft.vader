@@ -12,3 +12,4 @@ Execute (Set Filetype Globally):
   let g:vlp_preview_buffer_filetype = "cpp"
   call OpenTestMode()
   AssertEqual 'cpp', getbufvar(g:def_preview_bufname, "&ft")
+  unlet g:vlp_preview_buffer_filetype

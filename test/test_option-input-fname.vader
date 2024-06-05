@@ -45,3 +45,4 @@ Execute (Input FName: Shell Command):
 Execute (Set Input FName Globally):
   let g:vlp_input = "fname"
   call InputTest(0, expand("%:p"), 'function("FNameTest")')
+  unlet g:vlp_input

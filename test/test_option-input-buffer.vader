@@ -45,3 +45,4 @@ Execute (Input Buffer: Shell Command):
 Execute (Set Input Buffer Globally):
   let g:vlp_input = "buffer"
   call InputTest(0, string(bufnr()), 'function("BufferTest")')
+  unlet g:vlp_input

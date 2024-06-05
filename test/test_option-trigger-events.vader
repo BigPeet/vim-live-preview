@@ -57,3 +57,4 @@ Execute (Trigger Events: Dont trigger events):
 Execute (Trigger Events: Set trigger events globally):
   let g:vlp_trigger_events = ['BufWritePost', 'CursorHold']
   call TriggerTest(g:vlp_trigger_events, v:true)
+  unlet g:vlp_trigger_events

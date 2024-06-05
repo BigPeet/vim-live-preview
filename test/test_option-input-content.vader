@@ -41,3 +41,4 @@ Execute (Input Content: Shell Command):
 Execute (Set Input Content Globally):
   let g:vlp_input = "content"
   call InputTest(0, getline(1, "$"), 'function("ContentTest")')
+  unlet g:vlp_input

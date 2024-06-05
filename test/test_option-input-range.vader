@@ -45,4 +45,4 @@ Execute (Input Range: Shell Command):
 Execute (Set Input Range Globally):
   let g:vlp_input = "range"
   call InputTest(0, '1,3', 'function("RangeTest")')
-
+  unlet g:vlp_input
