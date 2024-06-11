@@ -35,6 +35,18 @@ function! s:GetOption(name)
 endfunction
 
 
+""" Utility functions
+
+function! s:GetFunction(func)
+  if type(a:func) == v:t_string
+    silent! return function(a:func)
+  elseif type(a:func) == v:t_func
+    return a:func
+  endif
+  return 0
+endfunction
+
+
 function! s:EnsureBrackets(name)
   let l:bracketed_name = a:name
   if l:bracketed_name[0] != '['
@@ -46,7 +58,7 @@ function! s:EnsureBrackets(name)
   return l:bracketed_name
 endfunction
 
-" Print functions
+
 function! s:Print(msg)
   echomsg a:msg
 endfunction
@@ -56,6 +68,17 @@ function! s:PrintError(msg)
   echoerr "Error: " . a:msg
 endfunction
 
+
+function! s:ReadChannel(channel, part)
+  let l:lines = []
+  while ch_status(a:channel, {'part': a:part}) == 'buffered'
+    let l:lines += [ch_read(a:channel, {'part': a:part})]
+  endwhile
+  return l:lines
+endfunction
+
+
+""" Leaving preview mode functions
 
 function! s:CleanUpLeaveCommand()
   let l:current_buffer = bufnr()
@@ -96,18 +119,34 @@ function! s:LeavePreviewMode()
 endfunction
 
 
-function! s:CreatePreviewBuffer(bufname)
-  exec "vertical new " . a:bufname
-  let l:bufnr = bufnr()
+""" Scratch buffer functions
 
+function! s:CreateSratchBuffer(bufname, vertical, size)
+  let l:cmd = a:vertical ? 'vertical' : 'horizontal'
+  let l:cmd = l:cmd . ' ' . (a:size > 0 ? a:size : '') . 'new ' . a:bufname
+  exec l:cmd
+  let l:bufnr = bufnr()
   setlocal nobuflisted
   setlocal bufhidden=wipe " or delete?
   setlocal buftype=nofile
   setlocal noswapfile
   setlocal nomodifiable " TODO: option to let it be modifiable
   setlocal autoread
-  exec "set ft=" . s:GetOption('preview_buffer_filetype')
+  return l:bufnr
+endfunction
 
+
+function! s:WriteScratchBuffer(bufnr, lines)
+  silent call setbufvar(a:bufnr, '&modifiable', v:true)
+  silent call setbufline(a:bufnr, 1, a:lines)
+  silent call deletebufline(a:bufnr, len(a:lines) + 1, "$")
+  silent call setbufvar(a:bufnr, '&modifiable', v:false)
+endfunction
+
+
+function! s:CreatePreviewBuffer(bufname)
+  let l:bufnr = s:CreateSratchBuffer(a:bufname, v:true, -1)
+  exec "set ft=" . s:GetOption('preview_buffer_filetype')
   augroup preview_mode_exit
     autocmd!
     autocmd WinClosed,BufDelete <buffer> call s:LeavePreviewMode()
@@ -116,18 +155,12 @@ function! s:CreatePreviewBuffer(bufname)
   return l:bufnr
 endfunction
 
+
 function! s:CreateErrorBuffer()
   let l:preview_bufname = s:EnsureBrackets(s:GetOption('preview_buffer_name'))
   let l:bufname = l:preview_bufname[0:len(l:preview_bufname)-2] . " Error]"
   exec win_id2win(bufwinid(s:preview_bufnr)) . "wincmd w"
-  exec "horizontal 10new " . l:bufname
-  let l:bufnr = bufnr()
-  setlocal nobuflisted
-  setlocal bufhidden=wipe " or delete?
-  setlocal buftype=nofile
-  setlocal noswapfile
-  setlocal nomodifiable
-  setlocal autoread
+  let l:bufnr = s:CreateSratchBuffer(l:bufname, v:false, 10)
   augroup error_buffer_exit
     autocmd!
     autocmd WinClosed,BufDelete <buffer> let s:error_bufnr = -1
@@ -137,41 +170,29 @@ function! s:CreateErrorBuffer()
 endfunction
 
 
-function! s:WritePreviewBuffer(bufnr, lines)
-  silent call setbufvar(a:bufnr, '&modifiable', v:true)
-  silent call setbufline(a:bufnr, 1, a:lines)
-  silent call deletebufline(a:bufnr, len(a:lines) + 1, "$")
-  silent call setbufvar(a:bufnr, '&modifiable', v:false)
-endfunction
+""" Function callback
 
-
-function! s:GetFunction(func)
-  if type(a:func) == v:t_string
-    silent! return function(a:func)
-  elseif type(a:func) == v:t_func
-    return a:func
-  endif
-  return 0
-endfunction
-
-
-function! s:GetParams()
-  let l:input = s:GetOption('input')
-  if l:input == 'range'
-    let l:params = "1, line('$')"
-  elseif l:input == 'buffer'
-    let l:params = "bufnr('%')"
-  elseif l:input == 'fname'
-    let l:params = "expand('%:p')"
-  elseif l:input == 'content'
-    let l:params = "escape(join(getline(1, '$'), '\n'), '\"')"
-  elseif l:input == 'none' || l:input == ''
-    let l:params = ""
+function! s:FunctionCallback(...)
+  if a:0 < 3 && a:0 >= 0
+    let l:input = s:GetOption('input')
+    let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
+    exec "call s:WriteScratchBuffer(s:preview_bufnr, s:func(" . l:quote .
+          \ join(a:000, ',') . l:quote . "))"
   else
-    call s:PrintError("Invalid input option: " . l:input)
+    call s:PrintError("Invalid number of arguments.")
   endif
-  return l:params
 endfunction
+
+
+""" Command callback
+
+function! s:CommandCallback(...)
+  " internal vim command
+  let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
+  let l:lines = split(execute(l:cmd), "\n")
+  call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
+endfunction
+
 
 function! s:ParameterizedCommand(cmd, args)
   let l:input = s:GetOption('input')
@@ -193,89 +214,7 @@ function! s:ParameterizedCommand(cmd, args)
 endfunction
 
 
-function! s:FunctionCallback(...)
-  if a:0 < 3 && a:0 >= 0
-    let l:input = s:GetOption('input')
-    let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
-    exec "call s:WritePreviewBuffer(s:preview_bufnr, s:func(" . l:quote .
-          \ join(a:000, ',') . l:quote . "))"
-  else
-    call s:PrintError("Invalid number of arguments.")
-  endif
-endfunction
-
-
-function! s:SetupWriteFunction()
-  let l:write_callback = 'call ' .
-        \ (
-        \   s:func != 0 ? 's:FunctionCallback' :
-        \   s:use_shell ? 's:ShellCallback' :
-        \   's:CommandCallback'
-        \ )
-        \ . '(' . s:GetParams() . ')'
-  " Initial write
-  exec l:write_callback
-
-  " Continuous write
-  let l:events = s:GetOption('trigger_events')
-  augroup preview_mode
-    autocmd!
-    if !empty(l:events)
-      exec "autocmd " . join(l:events, ",") . " <buffer> " .
-            \ l:write_callback . " | checktime"
-    else
-      call s:Print("No trigger events defined.")
-    endif
-  augroup END
-endfunction
-
-
-function! s:ReadChannel(channel, part)
-  let l:lines = []
-  while ch_status(a:channel, {'part': a:part}) == 'buffered'
-    let l:lines += [ch_read(a:channel, {'part': a:part})]
-  endwhile
-  return l:lines
-endfunction
-
-
-function! s:JobClosedCallback(channel) abort
-  let l:stderr = s:GetOption('stderr')
-  let l:lines = []
-  let l:out_lines = s:ReadChannel(a:channel, 'out')
-  let l:err_lines = s:ReadChannel(a:channel, 'err')
-  if l:stderr == 'fallback'
-    let l:lines = empty(l:out_lines) ? l:err_lines : l:out_lines
-  elseif l:stderr == 'first'
-    let l:lines = l:err_lines + l:out_lines
-  elseif l:stderr == 'last'
-    let l:lines = l:out_lines + l:err_lines
-  elseif l:stderr == 'none'
-    let l:lines = l:out_lines
-  elseif l:stderr == 'window'
-    let l:lines = l:out_lines
-    if !empty(l:err_lines)
-      if s:error_bufnr == -1
-        let s:error_bufnr = s:CreateErrorBuffer()
-      endif
-      call s:WritePreviewBuffer(s:error_bufnr, l:err_lines)
-    elseif s:error_bufnr != -1
-      exec "bdelete! " . s:error_bufnr
-    endif
-  endif
-  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
-endfunction
-
-
-function! s:InsertInputIntoShellCommand(cmd, input, value)
-  let l:pattern = '<' . a:input . '>'
-  if stridx(a:cmd, l:pattern) != -1
-    return substitute(a:cmd, l:pattern, a:value, 'g')
-  else
-    return a:cmd . " " . a:value
-  endif
-endfunction
-
+""" Shell callback
 
 function! s:ShellCallback(...)
   " external shell command
@@ -307,24 +246,101 @@ function! s:ShellCallback(...)
       let l:lines = split(system(l:cmd), "\n")
     endif
   endif
-  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
+  call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
 endfunction
 
 
-function! s:CommandCallback(...)
-  " internal vim command
-  let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
-  let l:lines = split(execute(l:cmd), "\n")
-  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
+function! s:InsertInputIntoShellCommand(cmd, input, value)
+  let l:pattern = '<' . a:input . '>'
+  if stridx(a:cmd, l:pattern) != -1
+    return substitute(a:cmd, l:pattern, a:value, 'g')
+  else
+    return a:cmd . " " . a:value
+  endif
 endfunction
 
+
+function! s:JobClosedCallback(channel) abort
+  let l:stderr = s:GetOption('stderr')
+  let l:lines = []
+  let l:out_lines = s:ReadChannel(a:channel, 'out')
+  let l:err_lines = s:ReadChannel(a:channel, 'err')
+  if l:stderr == 'fallback'
+    let l:lines = empty(l:out_lines) ? l:err_lines : l:out_lines
+  elseif l:stderr == 'first'
+    let l:lines = l:err_lines + l:out_lines
+  elseif l:stderr == 'last'
+    let l:lines = l:out_lines + l:err_lines
+  elseif l:stderr == 'none'
+    let l:lines = l:out_lines
+  elseif l:stderr == 'window'
+    let l:lines = l:out_lines
+    if !empty(l:err_lines)
+      if s:error_bufnr == -1
+        let s:error_bufnr = s:CreateErrorBuffer()
+      endif
+      call s:WriteScratchBuffer(s:error_bufnr, l:err_lines)
+    elseif s:error_bufnr != -1
+      exec "bdelete! " . s:error_bufnr
+    endif
+  endif
+  call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
+endfunction
+
+
+""" Setup autocmd / callbacks on trigger
+
+function! s:SetupWriteFunction()
+  let l:write_callback = 'call ' .
+        \ (
+        \   s:func != 0 ? 's:FunctionCallback' :
+        \   s:use_shell ? 's:ShellCallback' :
+        \   's:CommandCallback'
+        \ )
+        \ . '(' . s:GetFunctionParams() . ')'
+  " Initial write
+  exec l:write_callback
+
+  " Continuous write
+  let l:events = s:GetOption('trigger_events')
+  augroup preview_mode
+    autocmd!
+    if !empty(l:events)
+      exec "autocmd " . join(l:events, ",") . " <buffer> " .
+            \ l:write_callback . " | checktime"
+    else
+      call s:Print("No trigger events defined.")
+    endif
+  augroup END
+endfunction
+
+
+function! s:GetFunctionParams()
+  let l:input = s:GetOption('input')
+  if l:input == 'range'
+    let l:params = "1, line('$')"
+  elseif l:input == 'buffer'
+    let l:params = "bufnr('%')"
+  elseif l:input == 'fname'
+    let l:params = "expand('%:p')"
+  elseif l:input == 'content'
+    let l:params = "escape(join(getline(1, '$'), '\n'), '\"')"
+  elseif l:input == 'none' || l:input == ''
+    let l:params = ""
+  else
+    call s:PrintError("Invalid input option: " . l:input)
+  endif
+  return l:params
+endfunction
+
+
+""" Public functions
 
 function! vlp#DefaultOptions()
   return deepcopy(s:default_options)
 endfunction
 
 
-" Main functions
 " Entry point for 'plugins'
 "   - accepts a function or a command
 "   - optionally a dictionary with options (see ...)
@@ -368,11 +384,6 @@ function! vlp#EnterPreviewMode(functor, ...)
   endif
   let s:focus_bufnr = bufnr()
   let s:preview_bufnr = s:CreatePreviewBuffer(l:bufname)
-  if s:preview_bufnr == -1
-    call s:PrintError("Preview buffer already exists: " .
-          \ s:EnsureBrackets(s:GetOption('preview_buffer_name')))
-    return
-  endif
 
   " Setup leave
   augroup preview_mode_buffer_exit
