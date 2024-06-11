@@ -348,7 +348,10 @@ function! vlp#EnterPreviewMode(functor, ...)
     let &updatetime = s:GetOption('update_interval')
   endif
 
-  only " close all windows except the current one TODO: option
+  " is there only one window open?
+  if winnr("$") > 1
+    only " close all windows except the current one TODO: option
+  endif
   let s:focus_bufnr = bufnr()
   let s:preview_bufnr = s:CreatePreviewBuffer(l:bufname)
   if s:preview_bufnr == -1
