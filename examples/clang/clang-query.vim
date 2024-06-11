@@ -17,4 +17,5 @@ if &rtp =~ 'vim-live-preview'
         \     'input': 'fname',
         \     'trigger_events': ['BufWritePost'],
         \   })
+        \ | exec "10split " . <q-args> | wincmd p
 endif
