@@ -16,6 +16,7 @@ if &rtp =~ 'vim-live-preview'
         \     'preview_buffer_name': 'Query',
         \     'input': 'fname',
         \     'trigger_events': ['BufWritePost'],
+        \     'stderr': 'window',
         \   })
         \ | exec "10split " . <q-args> | wincmd p
 endif

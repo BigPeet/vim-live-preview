@@ -9,6 +9,8 @@ import os
 # :VLPPython --verbose
 # :VLPPython
 
+def oops(): # this is invalid syntax and will lead to an error
+
 def main():
     # get $USER
     parser = argparse.ArgumentParser()

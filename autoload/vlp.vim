@@ -6,6 +6,7 @@ let g:autoloaded_vim_live_preview = 1
 " Script variables and constants
 let s:preview_bufnr = -1
 let s:focus_bufnr = -1
+let s:error_bufnr = -1
 let s:func = 0
 let s:cmd = ""
 let s:job = 0
@@ -19,6 +20,7 @@ let s:default_options = {
       \ 'input': 'range',
       \ 'trigger_events': ['TextChanged', 'TextChangedI', 'TextChangedP',],
       \ 'use_jobs': v:true,
+      \ 'stderr': 'fallback',
       \ }
 
 " Getter functions for 'global' options
@@ -74,8 +76,12 @@ function! s:LeavePreviewMode()
   autocmd! preview_mode_exit
   autocmd! preview_mode_buffer_exit
   call s:CleanUpLeaveCommand()
+  if s:error_bufnr != -1
+    exec "bdelete! " . s:error_bufnr
+  endif
   let s:preview_bufnr = -1
   let s:focus_bufnr = -1
+  let s:error_bufnr = -1
   let s:func = 0
   let s:cmd = ""
   if s:GetOption('change_updatetime')
@@ -102,6 +108,26 @@ function! s:CreatePreviewBuffer(bufname)
     autocmd WinClosed,BufDelete <buffer> call s:LeavePreviewMode()
   augroup END
   wincmd p " go back to the previous window
+  return l:bufnr
+endfunction
+
+function! s:CreateErrorBuffer()
+  let l:preview_bufname = s:EnsureBrackets(s:GetOption('preview_buffer_name'))
+  let l:bufname = l:preview_bufname[0:len(l:preview_bufname)-2] . " Error]"
+  exec win_id2win(bufwinid(s:preview_bufnr)) . "wincmd w"
+  exec "horizontal 10new " . l:bufname
+  let l:bufnr = bufnr()
+  setlocal nobuflisted
+  setlocal bufhidden=wipe " or delete?
+  setlocal buftype=nofile
+  setlocal noswapfile
+  setlocal nomodifiable
+  setlocal autoread
+  augroup error_buffer_exit
+    autocmd!
+    autocmd WinClosed,BufDelete <buffer> let s:error_bufnr = -1
+  augroup END
+  exec win_id2win(bufwinid(s:focus_bufnr)) . "wincmd w"
   return l:bufnr
 endfunction
 
@@ -205,9 +231,29 @@ endfunction
 
 
 function! s:CloseCallback(channel) abort
-  let l:lines = ch_status(a:channel, {'part': 'out'}) == 'buffered' ?
-        \ s:ReadChannel(a:channel, 'out') :
-        \ s:ReadChannel(a:channel, 'err')
+  let l:stderr = s:GetOption('stderr')
+  let l:lines = []
+  let l:out_lines = s:ReadChannel(a:channel, 'out')
+  let l:err_lines = s:ReadChannel(a:channel, 'err')
+  if l:stderr == 'fallback'
+    let l:lines = empty(l:out_lines) ? l:err_lines : l:out_lines
+  elseif l:stderr == 'first'
+    let l:lines = l:err_lines + l:out_lines
+  elseif l:stderr == 'last'
+    let l:lines = l:out_lines + l:err_lines
+  elseif l:stderr == 'none'
+    let l:lines = l:out_lines
+  elseif l:stderr == 'window'
+    let l:lines = l:out_lines
+    if !empty(l:err_lines)
+      if s:error_bufnr == -1
+        let s:error_bufnr = s:CreateErrorBuffer()
+      endif
+      call s:WritePreviewBuffer(s:error_bufnr, l:err_lines)
+    elseif s:error_bufnr != -1
+      exec "bdelete! " . s:error_bufnr
+    endif
+  endif
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
 endfunction
 

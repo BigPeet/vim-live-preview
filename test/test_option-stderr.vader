@@ -1,0 +1,91 @@
+Include: setup.vader
+
+Execute (StdErr Test Helpers):
+  let g:def_error_bufname = '[VimLivePreview Error]'
+  function! StdErrTest(options, out, err, expected, ...)
+    if a:out && a:err
+      let l:cmd = 'echo "Hello stdout" ; >&2 echo "Hello stderr"'
+    elseif a:out
+      let l:cmd = 'echo "Hello stdout"'
+    elseif a:err
+      let l:cmd = '>&2 echo "Hello stderr"'
+    else
+      let l:cmd = 'echo'
+    endif
+    exec "call vlp#EnterPreviewMode(':!" . l:cmd . "', " . string(a:options)  . ")"
+    sleep 100m " sleep since async jobs might need a moment
+    AssertEqual a:expected,
+      \ getbufline(bufnr(g:def_preview_bufname), 1, "$")
+  endfunction
+
+
+Execute (StdErr Default):
+  call StdErrTest({'input': 'none'}, v:true, v:true, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none'}, v:true, v:false, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none'}, v:false, v:true, ["Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none'}, v:false, v:false, [""])
+
+Execute (StdErr Fallback):
+  call StdErrTest({'input': 'none', 'stderr': 'fallback'}, v:true, v:true, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'fallback'}, v:true, v:false, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'fallback'}, v:false, v:true, ["Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'fallback'}, v:false, v:false, [""])
+
+Execute (StdErr First):
+  call StdErrTest({'input': 'none', 'stderr': 'first'}, v:true, v:true, ["Hello stderr", "Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'first'}, v:true, v:false, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'first'}, v:false, v:true, ["Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'first'}, v:false, v:false, [""])
+
+Execute (StdErr Last):
+  call StdErrTest({'input': 'none', 'stderr': 'last'}, v:true, v:true, ["Hello stdout", "Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'last'}, v:true, v:false, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'last'}, v:false, v:true, ["Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'last'}, v:false, v:false, [""])
+
+Execute (StdErr None):
+  call StdErrTest({'input': 'none', 'stderr': 'none'}, v:true, v:true, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'none'}, v:true, v:false, ["Hello stdout"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'none'}, v:false, v:true, [""])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'none'}, v:false, v:false, [""])
+
+Execute (StdErr Window):
+  call StdErrTest({'input': 'none', 'stderr': 'window'}, v:true, v:true, ["Hello stdout"])
+  AssertEqual ["Hello stderr"], getbufline(bufnr(g:def_error_bufname), 1, "$")
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'window'}, v:true, v:false, ["Hello stdout"])
+  AssertEqual -1, bufnr(g:def_error_bufname)
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'window'}, v:false, v:true, [""])
+  AssertEqual ["Hello stderr"], getbufline(bufnr(g:def_error_bufname), 1, "$")
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'window'}, v:false, v:false, [""])
+  AssertEqual -1, bufnr(g:def_error_bufname)
+
+Execute (StdErr Window Toggle):
+  let cmd = 'if [[ "<range>" == "1,1" ]]; then >&2 echo "Hello stderr"; else echo "Hello stdout"; fi'
+  let options = {'input': 'range', 'stderr': 'window'}
+  exec "call vlp#EnterPreviewMode(':!" . cmd . "', " . string(options)  . ")"
+  sleep 100m " sleep since async jobs might need a moment
+  AssertEqual [''], getbufline(bufnr(g:def_preview_bufname), 1, "$")
+  AssertEqual ['Hello stderr'], getbufline(bufnr(g:def_error_bufname), 1, "$")
+  silent call setline(1, ['Here is a new line.', 'And another one.'])
+  doautocmd TextChanged
+  sleep 100m
+  AssertEqual -1, bufnr(g:def_error_bufname)
+  AssertEqual ['Hello stdout'], getbufline(bufnr(g:def_preview_bufname), 1, "$")
