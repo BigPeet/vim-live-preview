@@ -195,11 +195,19 @@ function! s:SetupWriteFunction()
 endfunction
 
 
-function! s:CloseCallback(channel) abort
+function! s:ReadChannel(channel, part)
   let l:lines = []
-  while ch_status(a:channel, {'part': 'out'}) == 'buffered'
-    let l:lines += [ch_read(a:channel)]
+  while ch_status(a:channel, {'part': a:part}) == 'buffered'
+    let l:lines += [ch_read(a:channel, {'part': a:part})]
   endwhile
+  return l:lines
+endfunction
+
+
+function! s:CloseCallback(channel) abort
+  let l:lines = ch_status(a:channel, {'part': 'out'}) == 'buffered' ?
+        \ s:ReadChannel(a:channel, 'out') :
+        \ s:ReadChannel(a:channel, 'err')
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
 endfunction
 
