@@ -9,6 +9,7 @@ let s:focus_bufnr = -1
 let s:error_bufnr = -1
 let s:func = 0
 let s:cmd = ""
+let s:use_shell = v:false
 let s:job = 0
 let s:updatetime_restore = &updatetime
 let s:options = {}
@@ -75,6 +76,9 @@ function! s:LeavePreviewMode()
   autocmd! preview_mode
   autocmd! preview_mode_exit
   autocmd! preview_mode_buffer_exit
+  if exists('#error_buffer_exit')
+    autocmd! error_buffer_exit
+  endif
   call s:CleanUpLeaveCommand()
   if s:error_bufnr != -1
     exec "bdelete! " . s:error_bufnr
@@ -84,6 +88,7 @@ function! s:LeavePreviewMode()
   let s:error_bufnr = -1
   let s:func = 0
   let s:cmd = ""
+  let s:use_shell = v:false
   if s:GetOption('change_updatetime')
     let &updatetime = s:updatetime_restore
   endif
@@ -188,7 +193,7 @@ function! s:ParameterizedCommand(cmd, args)
 endfunction
 
 
-function! s:FunctionWrite(...)
+function! s:FunctionCallback(...)
   if a:0 < 3 && a:0 >= 0
     let l:input = s:GetOption('input')
     let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
@@ -201,9 +206,13 @@ endfunction
 
 
 function! s:SetupWriteFunction()
-  let l:write_callback = "call " .
-        \ (s:func != 0 ? "s:FunctionWrite(" : "s:CommandWrite(")
-        \ . s:GetParams() . ")"
+  let l:write_callback = 'call ' .
+        \ (
+        \   s:func != 0 ? 's:FunctionCallback' :
+        \   s:use_shell ? 's:ShellCallback' :
+        \   's:CommandCallback'
+        \ )
+        \ . '(' . s:GetParams() . ')'
   " Initial write
   exec l:write_callback
 
@@ -230,7 +239,7 @@ function! s:ReadChannel(channel, part)
 endfunction
 
 
-function! s:CloseCallback(channel) abort
+function! s:JobClosedCallback(channel) abort
   let l:stderr = s:GetOption('stderr')
   let l:lines = []
   let l:out_lines = s:ReadChannel(a:channel, 'out')
@@ -268,45 +277,44 @@ function! s:InsertInputIntoShellCommand(cmd, input, value)
 endfunction
 
 
-function! s:CommandWrite(...)
-  " TODO: split external and internal commands into two functions
-  "       re-use commonalities, e.g. content handling
-  if fullcommand(s:cmd) == '!'
-    " external shell command
-    let l:cmd = substitute(s:cmd, '^:\?!', '', '')
-    let l:input = s:GetOption('input')
-    let l:value = ''
-    " TODO: do I need to shellescape input, e.g., if its an fname?
-    if l:input == 'content'
-      let l:value = substitute(a:1, '\\"', '"', 'g')
-    elseif l:input != 'none'
-      let l:value = l:input == 'range' ? a:1 . ',' . a:2 : a:1
-      let l:cmd = s:InsertInputIntoShellCommand(l:cmd, l:input, l:value)
-    endif
-
-    " TODO: neovim support: jobstart
-    if exists("*job_start") && s:GetOption('use_jobs')
-      let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
-      " preview buffer will be written in callback
-      let s:job = job_start(l:cmd, {'close_cb': function('s:CloseCallback')})
-      if l:input == 'content'
-        let l:channel = job_getchannel(s:job)
-        call ch_sendraw(l:channel, l:value)
-        call ch_close_in(l:channel)
-      endif
-      return
-    else
-      if l:input == 'content'
-        let l:lines = split(system(l:cmd, l:value), "\n")
-      else
-        let l:lines = split(system(l:cmd), "\n")
-      endif
-    endif
-  else
-    " internal vim command
-    let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
-    let l:lines = split(execute(l:cmd), "\n")
+function! s:ShellCallback(...)
+  " external shell command
+  let l:cmd = s:cmd
+  let l:input = s:GetOption('input')
+  let l:value = ''
+  if l:input == 'content'
+    let l:value = substitute(a:1, '\\"', '"', 'g')
+  elseif l:input != 'none'
+    let l:value = l:input == 'range' ? a:1 . ',' . a:2 : a:1
+    let l:cmd = s:InsertInputIntoShellCommand(l:cmd, l:input, l:value)
   endif
+
+  " TODO: neovim support: jobstart
+  if exists("*job_start") && s:GetOption('use_jobs')
+    let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
+    " preview buffer will be written in callback
+    let s:job = job_start(l:cmd, {'close_cb': function('s:JobClosedCallback')})
+    if l:input == 'content'
+      let l:channel = job_getchannel(s:job)
+      call ch_sendraw(l:channel, l:value)
+      call ch_close_in(l:channel)
+    endif
+    return
+  else
+    if l:input == 'content'
+      let l:lines = split(system(l:cmd, l:value), "\n")
+    else
+      let l:lines = split(system(l:cmd), "\n")
+    endif
+  endif
+  call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
+endfunction
+
+
+function! s:CommandCallback(...)
+  " internal vim command
+  let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
+  let l:lines = split(execute(l:cmd), "\n")
   call s:WritePreviewBuffer(s:preview_bufnr, l:lines)
 endfunction
 
@@ -329,6 +337,12 @@ function! vlp#EnterPreviewMode(functor, ...)
   let s:options = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
   let s:func = s:GetFunction(a:functor)
   let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
+  if fullcommand(s:cmd) == '!'
+    let s:use_shell = v:true
+    let s:cmd = substitute(s:cmd, '^:\?!', '', '')
+  else
+    let s:use_shell = v:false
+  end
 
   if s:func == 0 && s:cmd == ''
     call s:PrintError("Invalid argument: " . a:functor)
