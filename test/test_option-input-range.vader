@@ -25,22 +25,29 @@ Given (Input Text):
 
 Execute (Input Range: FuncRef):
   call InputTest(0, '1,3', 'function("RangeTest")', {"input": "range"})
+  AssertEqual "function('RangeTest')(1,3)", vlp#LastFunctor()
 
 Execute (Input Range: Function Name):
   call InputTest(0, '1,3', "'RangeTest'", {"input": "range"})
+  AssertEqual "function('RangeTest')(1,3)", vlp#LastFunctor()
 
 Execute (Input Range: Vim Command):
   call InputTest(0, '1,3', "':RangeTestCmd'", {"input": "range"})
+  AssertEqual "1,3RangeTestCmd", vlp#LastFunctor()
 
 Execute (Input Range: Shell Command Job):
   call InputTest(1, '1,3', "':!echo'", {"input": "range"})
+  AssertEqual "echo 1,3", vlp#LastFunctor()
   VLPLeave
   call InputTest(1, '1,3', "':!echo <range>'", {"input": "range"})
+  AssertEqual "echo 1,3", vlp#LastFunctor()
 
 Execute (Input Range: Shell Command):
   call InputTest(0, '1,3', "':!echo'", {"input": "range", "use_jobs": v:false})
+  AssertEqual "echo 1,3", vlp#LastFunctor()
   VLPLeave
   call InputTest(0, '1,3', "':!echo <range>'", {"input": "range", "use_jobs": v:false})
+  AssertEqual "echo 1,3", vlp#LastFunctor()
 
 Execute (Set Input Range Globally):
   let g:vlp_input = "range"

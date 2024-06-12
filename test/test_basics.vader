@@ -34,6 +34,7 @@ Execute (Define Basic Test Helpers):
     AssertEqual trim(execute(":1messages")), "Left preview mode."
     Assert ! bufexists(g:def_preview_bufname)
     Assert ! exists(':VLPLeave')
+    AssertEqual "", vlp#LastFunctor()
   endfunction
 
 Given (Foo Text):
@@ -41,24 +42,30 @@ Given (Foo Text):
 
 Execute (Default with FuncRef):
   call DefaultStartupTest(0, "function('VLPTestFunctionRange')")
+  AssertEqual "function('VLPTestFunctionRange')(1,1)", vlp#LastFunctor()
 
 Execute (Default with Function Name):
   call DefaultStartupTest(0, "'VLPTestFunctionRange'")
+  AssertEqual "function('VLPTestFunctionRange')(1,1)", vlp#LastFunctor()
 
 Execute (Default with Vim Command):
   call DefaultStartupTest(0, "':VLPTestFunctionRangeCmd'")
+  AssertEqual "1,1VLPTestFunctionRangeCmd", vlp#LastFunctor()
 
 Execute (Default with Shell Command Job):
   call DefaultStartupTest(1, "':!sed \"s/foo/bar/g\"'",
     \ "{\"input\": \"content\"}")
+  AssertEqual 'sed "s/foo/bar/g"', vlp#LastFunctor()
 
 Execute (Default with Shell Command):
   call DefaultStartupTest(0, "':!sed \"s/foo/bar/g\"'",
     \ "{\"input\": \"content\", \"use_jobs\": \"v:false\"}")
+  AssertEqual 'sed "s/foo/bar/g"', vlp#LastFunctor()
 
 Execute (Close Preview Mode):
   Assert ! bufexists(g:def_preview_bufname)
   call OpenTestMode()
+  AssertEqual "function('VLPTestFunctionRange')(1,1)", vlp#LastFunctor()
   Assert bufexists(g:def_preview_bufname)
   VLPLeave
   call AssertLeftPreviewModeAndWipedBuffer()

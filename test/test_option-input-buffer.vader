@@ -24,23 +24,35 @@ Given (Input Text):
 # "buffer" Tests
 
 Execute (Input Buffer: FuncRef):
-  call InputTest(0, string(bufnr()), 'function("BufferTest")', {"input": "buffer"})
+  let bufnr = string(bufnr())
+  call InputTest(0, bufnr, 'function("BufferTest")', {"input": "buffer"})
+  AssertEqual "function('BufferTest')(" . bufnr . ')', vlp#LastFunctor()
 
 Execute (Input Buffer: Function Name):
-  call InputTest(0, string(bufnr()), "'BufferTest'", {"input": "buffer"})
+  let bufnr = string(bufnr())
+  call InputTest(0, bufnr, "'BufferTest'", {"input": "buffer"})
+  AssertEqual "function('BufferTest')(" . bufnr . ')', vlp#LastFunctor()
 
 Execute (Input Buffer: Vim Command):
-  call InputTest(0, string(bufnr()), "':BufferTestCmd'", {"input": "buffer"})
+  let bufnr = string(bufnr())
+  call InputTest(0, bufnr, "':BufferTestCmd'", {"input": "buffer"})
+  AssertEqual "BufferTestCmd " . bufnr, vlp#LastFunctor()
 
 Execute (Input Buffer: Shell Command Job):
-  call InputTest(1, string(bufnr()), "':!echo'", {"input": "buffer"})
+  let bufnr = string(bufnr())
+  call InputTest(1, bufnr, "':!echo'", {"input": "buffer"})
+  AssertEqual "echo " . bufnr, vlp#LastFunctor()
   VLPLeave
-  call InputTest(1, string(bufnr()), "':!echo <buffer>'", {"input": "buffer"})
+  call InputTest(1, bufnr, "':!echo <buffer>'", {"input": "buffer"})
+  AssertEqual "echo " . bufnr, vlp#LastFunctor()
 
 Execute (Input Buffer: Shell Command):
-  call InputTest(0, string(bufnr()), "':!echo'", {"input": "buffer", "use_jobs": v:false})
+  let bufnr = string(bufnr())
+  call InputTest(0, bufnr, "':!echo'", {"input": "buffer", "use_jobs": v:false})
+  AssertEqual "echo " . bufnr, vlp#LastFunctor()
   VLPLeave
-  call InputTest(0, string(bufnr()), "':!echo <buffer>'", {"input": "buffer", "use_jobs": v:false})
+  call InputTest(0, bufnr, "':!echo <buffer>'", {"input": "buffer", "use_jobs": v:false})
+  AssertEqual "echo " . bufnr, vlp#LastFunctor()
 
 Execute (Set Input Buffer Globally):
   let g:vlp_input = "buffer"

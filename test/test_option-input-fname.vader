@@ -24,23 +24,35 @@ Given (Input Text):
 # "fname" Tests
 
 Execute (Input FName: FuncRef):
-  call InputTest(0, expand("%:p"), 'function("FNameTest")', {"input": "fname"})
+  let fname = expand("%:p")
+  call InputTest(0, fname, 'function("FNameTest")', {"input": "fname"})
+  AssertEqual "function('FNameTest')(\"" . fname . '")', vlp#LastFunctor()
 
 Execute (Input FName: Function Name):
-  call InputTest(0, expand("%:p"), "'FNameTest'", {"input": "fname"})
+  let fname = expand("%:p")
+  call InputTest(0, fname, "'FNameTest'", {"input": "fname"})
+  AssertEqual "function('FNameTest')(\"" . fname . '")', vlp#LastFunctor()
 
 Execute (Input FName: Vim Command):
-  call InputTest(0, expand("%:p"), "':FNameTestCmd'", {"input": "fname"})
+  let fname = expand("%:p")
+  call InputTest(0, fname, "':FNameTestCmd'", {"input": "fname"})
+  AssertEqual "FNameTestCmd " . fname, vlp#LastFunctor()
 
 Execute (Input FName: Shell Command Job):
-  call InputTest(1, expand("%:p"), "':!echo'", {"input": "fname"})
+  let fname = expand("%:p")
+  call InputTest(1, fname, "':!echo'", {"input": "fname"})
+  AssertEqual "echo " . fname, vlp#LastFunctor()
   VLPLeave
-  call InputTest(1, expand("%:p"), "':!echo <fname>'", {"input": "fname"})
+  call InputTest(1, fname, "':!echo <fname>'", {"input": "fname"})
+  AssertEqual "echo " . fname, vlp#LastFunctor()
 
 Execute (Input FName: Shell Command):
-  call InputTest(0, expand("%:p"), "':!echo'", {"input": "fname", "use_jobs": v:false})
+  let fname = expand("%:p")
+  call InputTest(0, fname, "':!echo'", {"input": "fname", "use_jobs": v:false})
+  AssertEqual "echo " . fname, vlp#LastFunctor()
   VLPLeave
-  call InputTest(0, expand("%:p"), "':!echo <fname>'", {"input": "fname", "use_jobs": v:false})
+  call InputTest(0, fname, "':!echo <fname>'", {"input": "fname", "use_jobs": v:false})
+  AssertEqual "echo " . fname, vlp#LastFunctor()
 
 Execute (Set Input FName Globally):
   let g:vlp_input = "fname"

@@ -24,19 +24,30 @@ Given (Input Text):
 # "content" Tests
 
 Execute (Input Content: FuncRef):
-  call InputTest(0, getline(1, "$"), 'function("ContentTest")', {"input": "content"})
+  let content = getline(1, "$")
+  let params = '"' . escape(join(content, "\n"), "\"") . '"'
+  call InputTest(0, content, 'function("ContentTest")', {"input": "content"})
+  AssertEqual "function('ContentTest')(" . params . ')', vlp#LastFunctor()
 
 Execute (Input Content: Function Name):
-  call InputTest(0, getline(1, "$"), "'ContentTest'", {"input": "content"})
+  let content = getline(1, "$")
+  let params = '"' . escape(join(content, "\n"), "\"") . '"'
+  call InputTest(0, content, "'ContentTest'", {"input": "content"})
+  AssertEqual "function('ContentTest')(" . params . ')', vlp#LastFunctor()
 
 Execute (Input Content: Vim Command):
+  let content = getline(1, "$")
+  let params = join(content, "\n")
   call InputTest(0, getline(1, "$"), "':ContentTestCmd'", {"input": "content"})
+  AssertEqual "ContentTestCmd " . params, vlp#LastFunctor()
 
 Execute (Input Content: Shell Command Job):
   call InputTest(1, getline(1, "$"), "':!cat'", {"input": "content"})
+  AssertEqual "cat", vlp#LastFunctor()
 
 Execute (Input Content: Shell Command):
   call InputTest(0, getline(1, "$"), "':!cat'", {"input": "content", "use_jobs": v:false})
+  AssertEqual "cat", vlp#LastFunctor()
 
 Execute (Set Input Content Globally):
   let g:vlp_input = "content"

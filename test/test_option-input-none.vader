@@ -20,18 +20,23 @@ Execute (Input Test Helpers):
 
 Execute (Input None: FuncRef):
   call InputTest(0, g:dummy_text, 'function("NoneTest")', {"input": "none"})
+  AssertEqual "function('NoneTest')()", vlp#LastFunctor()
 
 Execute (Input None: Function Name):
   call InputTest(0, g:dummy_text, "'NoneTest'", {"input": "none"})
+  AssertEqual "function('NoneTest')()", vlp#LastFunctor()
 
 Execute (Input None: Vim Command):
   call InputTest(0, g:dummy_text, "':NoneTestCmd'", {"input": "none"})
+  AssertEqual 'NoneTestCmd', vlp#LastFunctor()
 
 Execute (Input None: Shell Command Job):
   call InputTest(1, g:dummy_text, "':!echo " . g:dummy_text . "'", {"input": "none"})
+  AssertEqual 'echo ' . g:dummy_text, vlp#LastFunctor()
 
 Execute (Input None: Shell Command):
   call InputTest(0, g:dummy_text, "':!echo " . g:dummy_text . "'", {"input": "none", "use_jobs": v:false})
+  AssertEqual 'echo ' . g:dummy_text, vlp#LastFunctor()
 
 Execute (Set Input None Globally):
   let g:vlp_input = ""

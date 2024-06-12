@@ -97,3 +97,8 @@ Execute (StdErr Window Toggle):
   sleep 100m
   AssertEqual -1, bufnr(g:def_error_bufname)
   AssertEqual ['Hello stdout'], getbufline(bufnr(g:def_preview_bufname), 1, "$")
+
+Execute (Set Stderr Globally):
+  let g:vlp_stderr = 'none'
+  call StdErrTest({'input': 'none'}, v:true, v:true, ["Hello stdout"])
+  unlet g:vlp_stderr

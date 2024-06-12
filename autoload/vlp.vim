@@ -10,6 +10,7 @@ let s:error_bufnr = -1
 let s:func = 0
 let s:cmd = ""
 let s:use_shell = v:false
+let s:last_used_f = ""
 let s:job = 0
 let s:updatetime_restore = &updatetime
 let s:options = {}
@@ -109,6 +110,7 @@ function! s:LeavePreviewMode() "{{{
   let s:func = 0
   let s:cmd = ""
   let s:use_shell = v:false
+  let s:last_used_f = ""
   if s:GetOption('change_updatetime')
     let &updatetime = s:updatetime_restore
   endif
@@ -175,8 +177,11 @@ function! s:FunctionCallback(...) "{{{
   if a:0 < 3 && a:0 >= 0
     let l:input = s:GetOption('input')
     let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
-    exec "call s:WriteScratchBuffer(s:preview_bufnr, s:func(" . l:quote .
-          \ join(a:000, ',') . l:quote . "))"
+    let l:params = join(a:000, ',')
+    let s:last_used_f = string(s:func) . '(' . l:quote . l:params
+          \ . l:quote . ')'
+    exec "call s:WriteScratchBuffer(s:preview_bufnr, s:func(" . l:quote
+          \ . l:params . l:quote . "))"
   else
     call s:PrintError("Invalid number of arguments.")
   endif
@@ -189,6 +194,7 @@ endfunction
 function! s:CommandCallback(...) "{{{
   " internal vim command
   let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
+  let s:last_used_f = l:cmd
   let l:lines = split(execute(l:cmd), "\n")
   call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
 endfunction
@@ -203,15 +209,15 @@ function! s:ParameterizedCommand(cmd, args) "{{{
   if l:input == 'range'
     let l:cmd_prefix = a:args[0] . "," . a:args[1]
   elseif l:input == 'buffer' || l:input == 'fname'
-    let l:cmd_suffix = a:args[0]
+    let l:cmd_suffix = ' ' .  a:args[0]
   elseif l:input == 'content'
-    let l:cmd_suffix = substitute(a:args[0], '\\"', '"', 'g')
+    let l:cmd_suffix = ' ' . substitute(a:args[0], '\\"', '"', 'g')
   elseif l:input == 'none' || l:input == ''
     " do nothing
   else
     call s:PrintError("Invalid input option: " . l:input)
   endif
-  return l:cmd_prefix . a:cmd . " " . l:cmd_suffix
+  return l:cmd_prefix . a:cmd . l:cmd_suffix
 endfunction
 "}}}
 "}}}
@@ -229,6 +235,7 @@ function! s:ShellCallback(...) "{{{
     let l:value = l:input == 'range' ? a:1 . ',' . a:2 : a:1
     let l:cmd = s:InsertInputIntoShellCommand(l:cmd, l:input, l:value)
   endif
+  let s:last_used_f = l:cmd
 
   " TODO: neovim support: jobstart
   if exists("*job_start") && s:GetOption('use_jobs')
@@ -345,6 +352,11 @@ function! vlp#DefaultOptions() "{{{
 endfunction
 "}}}
 
+function! vlp#LastFunctor() "{{{
+  return s:last_used_f
+endfunction
+"}}}
+
 function! vlp#EnterPreviewMode(functor, ...) "{{{
   " Entry point for 'plugins'
   "   - accepts a function or a command
@@ -357,12 +369,8 @@ function! vlp#EnterPreviewMode(functor, ...) "{{{
   let s:options = a:0 > 0 && type(a:1) == v:t_dict ? a:1 : {}
   let s:func = s:GetFunction(a:functor)
   let s:cmd = s:func != 0 ? '' : type(a:functor) == v:t_string ? a:functor : ''
-  if fullcommand(s:cmd) == '!'
-    let s:use_shell = v:true
-    let s:cmd = substitute(s:cmd, '^:\?!', '', '')
-  else
-    let s:use_shell = v:false
-  end
+  let s:use_shell = fullcommand(s:cmd) == '!'
+  let s:cmd = substitute(s:cmd, '^:\?!\?', '', '')
 
   if s:func == 0 && s:cmd == ''
     call s:PrintError("Invalid argument: " . a:functor)
