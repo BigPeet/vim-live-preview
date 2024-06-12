@@ -3,7 +3,7 @@ if exists('g:autoloaded_vim_live_preview') || &cp || version < 700
 endif
 let g:autoloaded_vim_live_preview = 1
 
-" Script variables and constants
+" Script variables and constants {{{
 let s:preview_bufnr = -1
 let s:focus_bufnr = -1
 let s:error_bufnr = -1
@@ -23,21 +23,17 @@ let s:default_options = {
       \ 'use_jobs': v:true,
       \ 'stderr': 'fallback',
       \ }
+"}}}
 
-" Getter functions for 'global' options
-"  - If the option is not directly set by the user,
-"      it will fallback to the global variable.
-"  - If the global variable is not set,
-"      it will fallback to the default value.
-function! s:GetOption(name)
+" Utility functions {{{
+
+function! s:GetOption(name) "{{{
   return get(s:options, a:name,
        \ get(g:, 'vlp_' . a:name, s:default_options[a:name]))
 endfunction
+"}}}
 
-
-""" Utility functions
-
-function! s:GetFunction(func)
+function! s:GetFunction(func) "{{{
   if type(a:func) == v:t_string
     silent! return function(a:func)
   elseif type(a:func) == v:t_func
@@ -45,9 +41,9 @@ function! s:GetFunction(func)
   endif
   return 0
 endfunction
+"}}}
 
-
-function! s:EnsureBrackets(name)
+function! s:EnsureBrackets(name) "{{{
   let l:bracketed_name = a:name
   if l:bracketed_name[0] != '['
     let l:bracketed_name = '[' . l:bracketed_name
@@ -57,30 +53,31 @@ function! s:EnsureBrackets(name)
   endif
   return l:bracketed_name
 endfunction
+"}}}
 
-
-function! s:Print(msg)
+function! s:Print(msg) "{{{
   echomsg a:msg
 endfunction
+"}}}
 
-
-function! s:PrintError(msg)
+function! s:PrintError(msg) "{{{
   echoerr "Error: " . a:msg
 endfunction
+"}}}
 
-
-function! s:ReadChannel(channel, part)
+function! s:ReadChannel(channel, part) "{{{
   let l:lines = []
   while ch_status(a:channel, {'part': a:part}) == 'buffered'
     let l:lines += [ch_read(a:channel, {'part': a:part})]
   endwhile
   return l:lines
 endfunction
+"}}}
+"}}}
 
+" Leaving preview mode functions {{{
 
-""" Leaving preview mode functions
-
-function! s:CleanUpLeaveCommand()
+function! s:CleanUpLeaveCommand() "{{{
   let l:current_buffer = bufnr()
   if l:current_buffer == s:focus_bufnr
     delcommand -buffer VLPLeave
@@ -93,9 +90,9 @@ function! s:CleanUpLeaveCommand()
     augroup END
   endif
 endfunction
+"}}}
 
-
-function! s:LeavePreviewMode()
+function! s:LeavePreviewMode() "{{{
   autocmd! preview_mode
   autocmd! preview_mode_exit
   autocmd! preview_mode_buffer_exit
@@ -117,11 +114,12 @@ function! s:LeavePreviewMode()
   endif
   call s:Print("Left preview mode.")
 endfunction
+"}}}
+"}}}
 
+" Scratch buffer functions {{{
 
-""" Scratch buffer functions
-
-function! s:CreateSratchBuffer(bufname, vertical, size)
+function! s:CreateSratchBuffer(bufname, vertical, size) "{{{
   let l:cmd = a:vertical ? 'vertical' : 'horizontal'
   let l:cmd = l:cmd . ' ' . (a:size > 0 ? a:size : '') . 'new ' . a:bufname
   exec l:cmd
@@ -134,17 +132,17 @@ function! s:CreateSratchBuffer(bufname, vertical, size)
   setlocal autoread
   return l:bufnr
 endfunction
+"}}}
 
-
-function! s:WriteScratchBuffer(bufnr, lines)
+function! s:WriteScratchBuffer(bufnr, lines) "{{{
   silent call setbufvar(a:bufnr, '&modifiable', v:true)
   silent call setbufline(a:bufnr, 1, a:lines)
   silent call deletebufline(a:bufnr, len(a:lines) + 1, "$")
   silent call setbufvar(a:bufnr, '&modifiable', v:false)
 endfunction
+"}}}
 
-
-function! s:CreatePreviewBuffer(bufname)
+function! s:CreatePreviewBuffer(bufname) "{{{
   let l:bufnr = s:CreateSratchBuffer(a:bufname, v:true, -1)
   exec "set ft=" . s:GetOption('preview_buffer_filetype')
   augroup preview_mode_exit
@@ -154,9 +152,9 @@ function! s:CreatePreviewBuffer(bufname)
   wincmd p " go back to the previous window
   return l:bufnr
 endfunction
+"}}}
 
-
-function! s:CreateErrorBuffer()
+function! s:CreateErrorBuffer() "{{{
   let l:preview_bufname = s:EnsureBrackets(s:GetOption('preview_buffer_name'))
   let l:bufname = l:preview_bufname[0:len(l:preview_bufname)-2] . " Error]"
   exec win_id2win(bufwinid(s:preview_bufnr)) . "wincmd w"
@@ -168,11 +166,12 @@ function! s:CreateErrorBuffer()
   exec win_id2win(bufwinid(s:focus_bufnr)) . "wincmd w"
   return l:bufnr
 endfunction
+"}}}
+"}}}
 
+" Function callback {{{
 
-""" Function callback
-
-function! s:FunctionCallback(...)
+function! s:FunctionCallback(...) "{{{
   if a:0 < 3 && a:0 >= 0
     let l:input = s:GetOption('input')
     let l:quote = l:input == 'content' || l:input == 'fname' ? '"' : ''
@@ -182,19 +181,21 @@ function! s:FunctionCallback(...)
     call s:PrintError("Invalid number of arguments.")
   endif
 endfunction
+"}}}
+"}}}
 
+" Command callback {{{
 
-""" Command callback
-
-function! s:CommandCallback(...)
+function! s:CommandCallback(...) "{{{
   " internal vim command
   let l:cmd = s:ParameterizedCommand(s:cmd, a:000)
   let l:lines = split(execute(l:cmd), "\n")
   call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
 endfunction
+"}}}
 
 
-function! s:ParameterizedCommand(cmd, args)
+function! s:ParameterizedCommand(cmd, args) "{{{
   let l:input = s:GetOption('input')
   let l:cmd_prefix = ""
   let l:cmd_suffix = ""
@@ -212,11 +213,12 @@ function! s:ParameterizedCommand(cmd, args)
   endif
   return l:cmd_prefix . a:cmd . " " . l:cmd_suffix
 endfunction
+"}}}
+"}}}
 
+" Shell callback {{{
 
-""" Shell callback
-
-function! s:ShellCallback(...)
+function! s:ShellCallback(...) "{{{
   " external shell command
   let l:cmd = s:cmd
   let l:input = s:GetOption('input')
@@ -248,9 +250,9 @@ function! s:ShellCallback(...)
   endif
   call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
 endfunction
+"}}}
 
-
-function! s:InsertInputIntoShellCommand(cmd, input, value)
+function! s:InsertInputIntoShellCommand(cmd, input, value) "{{{
   let l:pattern = '<' . a:input . '>'
   if stridx(a:cmd, l:pattern) != -1
     return substitute(a:cmd, l:pattern, a:value, 'g')
@@ -258,9 +260,9 @@ function! s:InsertInputIntoShellCommand(cmd, input, value)
     return a:cmd . " " . a:value
   endif
 endfunction
+"}}}
 
-
-function! s:JobClosedCallback(channel) abort
+function! s:JobClosedCallback(channel) abort "{{{
   let l:stderr = s:GetOption('stderr')
   let l:lines = []
   let l:out_lines = s:ReadChannel(a:channel, 'out')
@@ -286,11 +288,12 @@ function! s:JobClosedCallback(channel) abort
   endif
   call s:WriteScratchBuffer(s:preview_bufnr, l:lines)
 endfunction
+"}}}
+"}}}
 
+" Setup autocmd / callbacks on trigger {{{
 
-""" Setup autocmd / callbacks on trigger
-
-function! s:SetupWriteFunction()
+function! s:SetupWriteFunction() "{{{
   let l:write_callback = 'call ' .
         \ (
         \   s:func != 0 ? 's:FunctionCallback' :
@@ -313,9 +316,9 @@ function! s:SetupWriteFunction()
     endif
   augroup END
 endfunction
+"}}}
 
-
-function! s:GetFunctionParams()
+function! s:GetFunctionParams() "{{{
   let l:input = s:GetOption('input')
   if l:input == 'range'
     let l:params = "1, line('$')"
@@ -332,19 +335,20 @@ function! s:GetFunctionParams()
   endif
   return l:params
 endfunction
+"}}}
+"}}}
 
+" Public functions {{{
 
-""" Public functions
-
-function! vlp#DefaultOptions()
+function! vlp#DefaultOptions() "{{{
   return deepcopy(s:default_options)
 endfunction
+"}}}
 
-
-" Entry point for 'plugins'
-"   - accepts a function or a command
-"   - optionally a dictionary with options (see ...)
-function! vlp#EnterPreviewMode(functor, ...)
+function! vlp#EnterPreviewMode(functor, ...) "{{{
+  " Entry point for 'plugins'
+  "   - accepts a function or a command
+  "   - optionally a dictionary with options (see ...)
   if s:preview_bufnr != -1
     call s:PrintError("Already in preview mode.")
     return
@@ -395,3 +399,7 @@ function! vlp#EnterPreviewMode(functor, ...)
   " Setup write function
   call s:SetupWriteFunction()
 endfunction
+"}}}
+"}}}
+
+" vim:foldmethod=marker:foldlevel=0
