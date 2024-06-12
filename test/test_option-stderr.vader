@@ -64,6 +64,14 @@ Execute (StdErr None):
   VLPLeave
   call StdErrTest({'input': 'none', 'stderr': 'none'}, v:false, v:false, [""])
 
+Execute (StdErr No Jobs):
+  " this will ignore stderr and just treat it as normal output
+  call StdErrTest({'input': 'none', 'stderr': 'none', 'use_jobs': v:false},
+    \ v:true, v:true, ["Hello stdout", "Hello stderr"])
+  VLPLeave
+  call StdErrTest({'input': 'none', 'stderr': 'none', 'use_jobs': v:false},
+    \ v:false, v:true, ["Hello stderr"])
+
 Execute (StdErr Window):
   call StdErrTest({'input': 'none', 'stderr': 'window'}, v:true, v:true, ["Hello stdout"])
   AssertEqual ["Hello stderr"], getbufline(bufnr(g:def_error_bufname), 1, "$")
