@@ -1,7 +1,15 @@
-if exists('g:clang_preprocessor_loaded') || &cp || version < 700
-  finish
-endif
-let g:clang_preprocessor_loaded = 1
+" Preprocessor example using clang
+
+" This example demonstrates how VLP can be used to show the preprocessed output
+" of a C or C++ file using clang.
+
+" The example provides several ways to pass input into the functor:
+" - the current buffer
+" - the written file
+" - the actual file content
+" - the file name
+" - nothing
+"
 
 if !executable("clang")
   finish

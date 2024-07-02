@@ -1,7 +1,16 @@
-if exists('g:clang_query_loaded') || &cp || version < 700
-  finish
-endif
-let g:clang_query_loaded = 1
+" Query example using clang-query
+
+" In this example, we use VLP to create a preview window for the output for
+" clang-query. The query is run on the file that is currently being edited.
+" The query itself is defined in the file passed to the command VLPQuery.
+" Notably, the stderr is redirected to an additional window.
+"
+" Run this example by opening main.cpp and running the command:
+"  :VLPQuery query-commands.txt
+"
+" Note: You can update the query-commands.txt while the preview mode is active
+" but the preview window will only update when the C++ file is saved.
+
 
 if !executable("clang-query")
   finish
