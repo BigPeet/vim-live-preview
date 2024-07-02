@@ -10,11 +10,11 @@ To give an example, I wanted write small plugin to convert conventional markdown
 But there were some minor details which required manual touches.
 So I‘ve implemented a simple generic preview functionality to debug my post-processing.
 
-*Video showcasing VLPJira*
+![](https://github.com/BigPeet/vim-live-preview/assets/jira-example.png)
 
 Then I started using it more and more for other things: showing the preprocessed version of the C++ file I’m working on, running clang-query, or executing unit tests to see if I’ve fixed them.
 
-*Video showcasing VLPQuery*
+![](https://github.com/BigPeet/vim-live-preview/assets/clang-query-example.png)
 
 ### Usage Example
 
@@ -34,7 +34,7 @@ call vlp#EnterPreviewMode(function("s:FooBar"))
 
 " or
 
-command! -nargs=0 VLPJira call vlp#EnterPreviewMode('!pandoc -f gfm -t jira <fname>', 
+command! -nargs=0 VLPJira call vlp#EnterPreviewMode('!pandoc -f gfm -t jira <fname>',
     \ {
     \  "input": "fname",
     \  "trigger_events": ["BufWritePost"],
@@ -72,13 +72,13 @@ To demonstrate:
 
 ```vim
 " will use the default value for 'preview_buffer_name': [VimLivePreview]
-call vlp#EnterPreviewMode(function("s:FooBar")) 
+call vlp#EnterPreviewMode(function("s:FooBar"))
 ```
 
 ```vim
 let g:vlp_preview_buffer_name = "[MyPreview]"
 " will use the global value for 'preview_buffer_name': [MyPreview]
-call vlp#EnterPreviewMode(function("s:FooBar")) 
+call vlp#EnterPreviewMode(function("s:FooBar"))
 ```
 
 ```vim
