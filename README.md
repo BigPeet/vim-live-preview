@@ -10,11 +10,11 @@ To give an example, I wanted write small plugin to convert conventional markdown
 But there were some minor details which required manual touches.
 So I‘ve implemented a simple generic preview functionality to debug my post-processing.
 
-![](https://github.com/BigPeet/vim-live-preview/assets/jira-example.png)
+![Screenshot of a jira conversion](assets/jira-example.png)
 
 Then I started using it more and more for other things: showing the preprocessed version of the C++ file I’m working on, running clang-query, or executing unit tests to see if I’ve fixed them.
 
-![](https://github.com/BigPeet/vim-live-preview/assets/clang-query-example.png)
+![Screenshot of the clang-query example](assets/clang-query-example.png)
 
 ### Usage Example
 
