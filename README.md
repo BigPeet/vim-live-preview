@@ -45,7 +45,6 @@ More examples can be found in the [examples](https://github.com/BigPeet/vim-live
 
 For more information about how functors are invoked and the various options, refer to the help pages: `:help vim-live-preview`
 
-
 ## Installation
 
 To install, you can use Vim's built-in package management (see `:help packages`).
