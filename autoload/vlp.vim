@@ -1,3 +1,9 @@
+" vim-live-preview / vlp.vim
+" A vim plugin which enables a simple live preview for anything text.
+" Author: Peter Wolf <pwolf2310@gmail.com>
+" License: MIT
+" Version: 1.0
+
 if exists('g:autoloaded_vim_live_preview') || &cp || version < 700
   finish
 endif
