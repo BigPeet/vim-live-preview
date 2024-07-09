@@ -1,0 +1,239 @@
+*vim-live-preview.txt* Simple live preview for anything text  *vim-live-preview*
+
+Author:  Peter Wolf <pwolf2310@gmail.com>
+License: MIT
+
+
+==============================================================================
+CONTENTS                                                   *vlp* *vlp-contents*
+
+  1. Introduction                                          |vlp-introduction|
+  2. Features                                              |vlp-features|
+    2.1 vlp#EnterPreviewMode                           |vlp-enterpreviewmode|
+    2.2 VLPLeave                                           |:VLPLeave|
+    2.3 Other functions                                    |vlp-functions|
+  3. Options                                               |vlp-options|
+  4. Examples                                              |vlp-examples|
+
+
+==============================================================================
+INTRODUCTION                                               *vlp-introduction*
+
+
+vim-live-preview (or VLP) is a plugin which enables you to easily perform some
+„task“ on a buffer and preview the result.
+The preview is updated based on configured events, e.g. when the buffer is
+changed or saved.
+
+E.g., you can use an external tool to generate an AST from a source file and
+display it in a split window. Or you can pytest on your test suite whenever
+you save the current buffer and view the results.
+
+
+==============================================================================
+FEATURES                                                       *vlp-features*
+
+VLP is not meant to be used ad-hoc (although it can).
+It rather allows you to build your own various commands or even plugins.
+
+It does so by providing the |vlp#EnterPreviewMode| function.
+When called, this function will setup the "preview mode" based on the provided
+options and parameters.
+E.g., you can specify a task and events which will cause it to be run.
+>
+  command! -nargs=0 VLPJira call vlp#EnterPreviewMode(
+      \'!pandoc -f gfm -t jira <fname>',
+      \ {
+      \  "input": "fname",
+      \  "trigger_events": ["BufWritePost"],
+      \ })
+<
+This command will create a "preview mode" which execute the pandoc command in
+a shell whenever the buffer is saved and provide it the buffer's name.
+
+When in "preview mode", there will be two windows open:
+
+                                      *vlp-focus-buffer* *vlp-preview-buffer*
+
+- the "preview buffer", which contains the task's result,
+- and the "focus buffer", which acts as your working buffer and potential
+  input for the task.
+
+If the "preview buffer" is closed or |:VLPLeave| is run in the "focus buffer",
+then the "preview mode" will be exited, i.e. the task is no longer run.
+
+
+vlp#EnterPreviewMode ~
+                                                       *vlp#EnterPreviewMode*
+
+vlp#EnterPreviewMode({task} [,{options}])
+                Will open "preview mode" based on the given {task}.
+                {task} can either be a |Funcref| or a |String|.
+                If it is a |String|, then it must be either the name of a
+                |function|, a Vim or shell command.
+                {options} is a |dict| of various options which can modify the
+                exact behavior of the task, e.g. when it is run,
+                see |vlp-options|.
+                If called when already in "preview mode", it will print an
+                error message but nothing else.
+                If a buffer with the |preview-buffer-name| already exists, an
+                error message will be printed.
+
+
+:VLPLeave ~
+                                                                  *:VLPLeave*
+
+:VLPLeave       Leaves the "preview mode". Only active in the |focus-buffer|.
+
+
+Other functions ~
+                                                              *vlp-functions*
+
+                                                         *vlp#DefaultOptions*
+vlp#DefaultOptions()
+                Returns a |dict| with the default options, see |vlp-options|.
+
+                                                            *vlp#LastFunctor*
+vlp#LastFunctor()
+                Returns a |String| of the last used "functor" used.
+                E.g. the function or command with all its parameters.
+
+
+==============================================================================
+OPTIONS                                                         *vlp-options*
+
+
+Options can be either set globally or individually for each call.
+For each option, the global option's name is prefixed with `g:vlp_*`.
+E.g., the option |preview_buffer_name| can be globally set with
+|g:vlp_preview_buffer_name|. If not specified, the default value will be used.
+The priority is: individiual setting > global setting > default value
+
+To demonstrate:
+>
+  " Variant 1: Use default
+  " will use the default value for 'preview_buffer_name': [VimLivePreview]
+  call vlp#EnterPreviewMode(function("s:FooBar"))
+
+  " Variant 2: Use global setting
+  let g:vlp_preview_buffer_name = "[MyPreview]"
+  " will use the global value for 'preview_buffer_name': [MyPreview]
+  call vlp#EnterPreviewMode(function("s:FooBar"))
+
+  " Variant 3: Use call specific setting
+  let g:vlp_preview_buffer_name = "[MyPreview]"
+  " will use the specified value for 'preview_buffer_name': [FooBarPreview]
+  call vlp#EnterPreviewMode(function("s:FooBar"),
+            \ {"preview_buffer_name": "[FooBarPreview]"})
+<
+
+In the remainder of this section, the various options are listed in their
+global name form.
+
+------------------------------------------------------------------------------
+*g:vlp_input*                                                     *vlp-input*
+
+This option is a |String| which specifies what exactly is passed as input to
+the task. The following a supported values:
+
+        "range"   The task will receive the first and last line of the
+                  |focus-buffer|. I.e., if the task is a function `f`, it will
+                  call `f(1, line('$'))` . If the task is a Vim command `c`,
+                  then it will execute `:1,$c`.
+                  And if the task is a shell command `s`, then the range is
+                  appended like so: `s 1,x`
+      "content"   The task will receive the content of the |focus-buffer| as
+                  input. A function or Vim command will simply receive the
+                  content as (escaped) |String| parameter. A shell command
+                  will receive the content via stdin.
+        "fname"   The task will receive the name of the |focus-buffer|.
+       "buffer"   The task will receive the |bufnr| of the |focus-buffer|.
+         "none"   The task will not receive any input.
+
+Default: "range"
+
+>
+  let g:vlp_input = "range"
+<
+
+For shell commands, there is also the option to alter the placement of the
+input by placing "<INPUT-VALUE>" inside the command.
+>
+  " will replace <fname> with the file's name instead of appending it
+  call vlp#EnterPreviewMode("!python3 <fname> --verbose", {"input": "fname"})
+<
+This does not work for the values "none" and "content".
+
+Note: The task / functor needs to be able to handle the chosen input.
+E.g. if "range" is chosen, then a function needs to be able accept two integer
+parameters. Similarly, a Vim command would need to accept a range.
+
+
+------------------------------------------------------------------------------
+*g:vlp_trigger_events*                                   *vlp-trigger-events*
+
+This option is a |List| of |String| elements which specify the |autocmd-events|
+which will cause the task to be run.
+>
+  " When TextChanged is triggered, Foo will be called
+  call vlp#EnterPreviewMode(function('Foo'),
+          \ {"trigger_events": ["TextChanged"]})
+<
+Default: ["TextChanged", "TextChangedI", "TextChangedP"]
+>
+  let g:vlp_trigger_events = ["TextChanged", "TextChangedI", "TextChangedP"]
+<
+
+
+------------------------------------------------------------------------------
+*g:vlp_preview_buffer_name*                         *vlp-preview-buffer-name*
+
+This option specifies the name used for the |preview-buffer|.
+The actually used name will always be enclosed by '[' and ']'.
+>
+  " The name of the preview-buffer will be [MyPreview]
+  call vlp#EnterPreviewMode('Foo', {"preview_buffer_name": "MyPreview"})
+<
+
+Default: "[VimLivePreview]"
+>
+  let g:vlp_preview_buffer_name = "[VimLivePreview]"
+<
+
+
+------------------------------------------------------------------------------
+*g:vlp_stderr*                                    *vlp-stderr* *error-buffer*
+
+This option is only relevant when using shell commands.
+It specifies how the stderr output of the command will be handled.
+The following a supported values:
+
+     "fallback"   stderr will be written into the |preview-buffer| but only if
+                  the command's stdout is empty.
+        "first"   stderr will be written into the |preview-buffer| before the
+                  command's stdout.
+         "last"   stderr will be written into the |preview-buffer| after the
+                  command's stdout.
+         "none"   stderr will NOT be written into the |preview-buffer|.
+       "window"   stderr will be written into a separate |error-buffer|.
+                  This buffer will only be opened, IF stderr is not empty.
+                  If the buffer was opened but the stderr of a new run is now
+                  empty, then the buffer will be closed.
+
+
+Default: "fallback"
+>
+  let g:vlp_stderr = "fallback"
+<
+
+
+------------------------------------------------------------------------------
+*g:vlp_preview_buffer_filetype*                 *vlp-preview-buffer-filetype*
+
+This option ...
+
+
+
+
+
+vim:tw=78:ft=help
