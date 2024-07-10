@@ -170,7 +170,7 @@ parameters. Similarly, a Vim command would need to accept a range.
 
 
 ------------------------------------------------------------------------------
-*g:vlp_trigger_events*                                   *vlp-trigger-events*
+*g:vlp_trigger_events*                                   *vlp-trigger_events*
 
 This option is a |List| of |String| elements which specify the |autocmd-events|
 which will cause the task to be run.
@@ -186,7 +186,7 @@ Default: ["TextChanged", "TextChangedI", "TextChangedP"]
 
 
 ------------------------------------------------------------------------------
-*g:vlp_preview_buffer_name*                         *vlp-preview-buffer-name*
+*g:vlp_preview_buffer_name*                         *vlp-preview_buffer_name*
 
 This option specifies the name used for the |preview-buffer|.
 The actually used name will always be enclosed by '[' and ']'.
@@ -202,7 +202,7 @@ Default: "[VimLivePreview]"
 
 
 ------------------------------------------------------------------------------
-*g:vlp_stderr*                                    *vlp-stderr* *error-buffer*
+*g:vlp_stderr*                                *vlp-stderr* *vlp-error-buffer*
 
 This option is only relevant when using shell commands.
 It specifies how the stderr output of the command will be handled.
@@ -228,12 +228,65 @@ Default: "fallback"
 
 
 ------------------------------------------------------------------------------
-*g:vlp_preview_buffer_filetype*                 *vlp-preview-buffer-filetype*
+*g:vlp_preview_buffer_filetype*                 *vlp-preview_buffer_filetype*
 
-This option ...
+This option will set the 'filetype' of the |preview-buffer|.
+E.g.:
+>
+  " The filetype of the preview-buffer will be set to 'cpp'
+  call vlp#EnterPreviewMode('Foo', {"preview_buffer_filetype": "cpp"})
+<
+Default: ''
+>
+  let g:vlp_preview_buffer_filetype = ""
+<
 
 
+------------------------------------------------------------------------------
+*g:vlp_change_updatetime*                             *vlp-change_updatetime*
 
+This |boolean| option determines if the 'updatetime' will be changed to
+|update_interval| during "preview mode". If disabled, 'updatetime' will not be
+changed. Otherwise, the 'updatetime' will bet set to |update_interval| for the
+duration of the "preview mode". When "preview mode" is left, 'updatetime' will
+be restored to its previous value.
+
+Default: v:true
+>
+  let g:vlp_change_updatetime = v:true
+<
+
+
+------------------------------------------------------------------------------
+*g:vlp_update_interval*                                 *vlp-update_interval*
+
+If |change_updatetime| is set, 'updatetime' will be set to this option's value
+for the duration of the "preview mode".
+When "preview mode" is left, 'updatetime' will be restored to its previous
+value.
+
+Default: 250
+>
+  let g:vlp_update_interval = 250
+<
+
+
+------------------------------------------------------------------------------
+*g:vlp_use_jobs*                                               *vlp-use_jobs*
+
+This |boolean| option determines if shell commands will be started
+asynchronously.
+
+Default: v:true
+>
+  let g:vlp_use_jobs = v:true
+<
+
+
+==============================================================================
+EXAMPLES                                                       *vlp-examples*
+
+Usage examples can be found in this plugin's example directory.
 
 
 vim:tw=78:ft=help
