@@ -7,6 +7,8 @@ A vim plugin which enables a simple live preview for *anything text*.
 vim-live-preview (or VLP) is a plugin which enables you to easily perform some „task“ on a buffer and preview the result.
 The preview is updated based on configured events, e.g. when the buffer is changed or saved.
 
+*Note:* I developed this plugin for Vim, but it should (mostly) work for Neovim as well.
+
 To give an example, I've written a small plugin to convert conventional markdown to Jira's markdown flavor using pandoc.
 Minor details required manual touches so I‘ve implemented a simple generic preview functionality to debug my post-processing.
 

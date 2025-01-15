@@ -16,6 +16,8 @@ let s:error_bufnr = -1
 let s:func = 0
 let s:cmd = ""
 let s:use_shell = v:false
+let s:nvim_out = []
+let s:nvim_err = []
 let s:last_used_f = ""
 let s:job = 0
 let s:updatetime_restore = &updatetime
@@ -243,9 +245,24 @@ function! s:ShellCallback(...) "{{{
   endif
   let s:last_used_f = l:cmd
 
-  " TODO: neovim support: jobstart
-  if exists("*job_start") && s:GetOption('use_jobs')
+  if (exists("*job_start") || exists("*jobstart")) && s:GetOption('use_jobs')
     let l:cmd = has('win32') ? l:cmd : [&shell, '-c', l:cmd]
+    " nvim / neovim
+    if exists("*jobstart")
+      let s:nvim_out = []
+      let s:nvim_err = []
+      let l:job = jobstart(l:cmd, {'on_stdout': function('s:NvimJobCallback'),
+            \ 'on_stderr': function('s:NvimJobCallback'),
+            \ 'on_exit': function('s:NvimJobCallback'),
+            \ 'stdout_buffered': v:true,
+            \ 'stderr_buffered': v:true})
+      if l:input == 'content'
+        call chansend(l:job, l:value)
+        call chanclose(l:job, 'stdin')
+      endif
+      return
+    endif
+    " VIM
     " preview buffer will be written in callback
     let s:job = job_start(l:cmd, {'close_cb': function('s:JobClosedCallback')})
     if l:input == 'content'
@@ -275,26 +292,42 @@ function! s:InsertInputIntoShellCommand(cmd, input, value) "{{{
 endfunction
 "}}}
 
+function! s:NvimJobCallback(job_id, data, event) abort "{{{
+  if a:event == 'stdout'
+    let s:nvim_out = a:data
+  elseif a:event == 'stderr'
+    let s:nvim_err = a:data
+  elseif a:event == 'exit'
+    call s:WriteOutErr(s:nvim_out, s:nvim_err)
+  endif
+endfunction
+"}}}
+
 function! s:JobClosedCallback(channel) abort "{{{
-  let l:stderr = s:GetOption('stderr')
-  let l:lines = []
   let l:out_lines = s:ReadChannel(a:channel, 'out')
   let l:err_lines = s:ReadChannel(a:channel, 'err')
+  call s:WriteOutErr(l:out_lines, l:err_lines)
+endfunction
+"}}}
+
+function s:WriteOutErr(out_lines, err_lines) " {{{
+  let l:stderr = s:GetOption('stderr')
+  let l:lines = []
   if l:stderr == 'fallback'
-    let l:lines = empty(l:out_lines) ? l:err_lines : l:out_lines
+    let l:lines = empty(a:out_lines) ? a:err_lines : a:out_lines
   elseif l:stderr == 'first'
-    let l:lines = l:err_lines + l:out_lines
+    let l:lines = a:err_lines + a:out_lines
   elseif l:stderr == 'last'
-    let l:lines = l:out_lines + l:err_lines
+    let l:lines = a:out_lines + a:err_lines
   elseif l:stderr == 'none'
-    let l:lines = l:out_lines
+    let l:lines = a:out_lines
   elseif l:stderr == 'window'
-    let l:lines = l:out_lines
-    if !empty(l:err_lines)
+    let l:lines = a:out_lines
+    if !empty(a:err_lines)
       if s:error_bufnr == -1
         let s:error_bufnr = s:CreateErrorBuffer()
       endif
-      call s:WriteScratchBuffer(s:error_bufnr, l:err_lines)
+      call s:WriteScratchBuffer(s:error_bufnr, a:err_lines)
     elseif s:error_bufnr != -1
       exec "bdelete! " . s:error_bufnr
     endif
